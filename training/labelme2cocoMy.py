@@ -15,7 +15,9 @@ MAPPING = {
     "detached": "detached",
     "occlusedAttached": "occludedAttached",
     "occlusedDetached": "detached",
-    "unknown": "occludedAttached"
+    "unknown": "occludedAttached",
+    "attachedSide": "attached",
+    "occluseDetached": "detached"
 }
 
 
