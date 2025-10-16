@@ -94,7 +94,7 @@ import os
 import math, json
 from math import sqrt, pi
 
-
+from csteDef import *
 
 # Define Helper Functions
 def get_image_paths(directory):
@@ -1491,7 +1491,7 @@ class DataAnalysis:
             frame0 = int(m[-1]) if m else idx
             frame1 = frame0 + 1
 
-            to_draw = []  # (tid, cnt)
+            to_draw = []  # (tid, cnt, classeID)
             if use_rich and df_rich is not None:
                 rows = df_rich[df_rich["frame"] == frame1]
                 if "score" in rows.columns:
@@ -1519,8 +1519,18 @@ class DataAnalysis:
                                     best_iou, best_cnt = iou, cnt_cand
                             if best_iou >= iou_match_thresh and best_cnt is not None:
                                 cnt = best_cnt
+
+                    classID = r["class_id"]
+                    if classID == ATTACHED:
+                        className = 'A'
+                    elif classID == DETACHED:
+                        className = 'D'
+                    elif classID == UNKNOWN:
+                        className = 'U'
+                    else:
+                        className = '!'
                     if cnt is not None:
-                        to_draw.append((tid, cnt))
+                        to_draw.append((tid, cnt, className))
             else:
                 # fallback: uso detections con score >= thres per aiutare il match
                 dets = []
@@ -1552,14 +1562,14 @@ class DataAnalysis:
                         if iou > best_iou:
                             best_iou, best_cnt = iou, cnt_cand
                     if best_iou >= iou_match_thresh and best_cnt is not None:
-                        to_draw.append((tid, best_cnt))
+                        to_draw.append((tid, best_cnt, '?'))
 
-            for tid, cnt in to_draw:
+            for tid, cnt, className in to_draw:
                 color = palette.get(tid, (255, 255, 255))
                 cv2.polylines(img, [cnt.reshape(-1, 1, 2)], True, color, contour_thickness)
                 cx = int(np.mean(cnt[:, 0]));
                 cy = int(np.mean(cnt[:, 1]))
-                cv2.putText(img, str(tid), (cx + 3, cy - 3), cv2.FONT_HERSHEY_SIMPLEX, 0.8, color, 2, cv2.LINE_AA)
+                cv2.putText(img, className+str(tid), (cx + 3, cy - 3), cv2.FONT_HERSHEY_SIMPLEX, 0.8, color, 2, cv2.LINE_AA)
 
             writer.write(img)
 
