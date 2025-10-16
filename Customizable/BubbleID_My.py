@@ -1344,11 +1344,12 @@ class DataAnalysis:
         contours_path = os.path.join(self.savefolder, f"contours_{self.extension}.json")
         if not os.path.exists(contours_path):
             raise FileNotFoundError(f"'{contours_path}' non trovato. Esegui GenerateData(..., save_contours=True).")
-        rich_csv = os.path.join(self.savefolder, f"rich_{self.extension}.csv")
+        rich_csv = os.path.join(self.savefolder, f"rich_{self.extension}.csv") # pas obligatoire mais mieux s'il existe
         use_rich = os.path.exists(rich_csv)
 
         # --- lista frame ---
         def _natkey(p):
+            # pour trier numeriquement les fichier par leur dernier nombre
             m = re.findall(r'\d+', os.path.basename(p))
             return int(m[-1]) if m else p
 
@@ -1364,11 +1365,12 @@ class DataAnalysis:
         with open(track_file, "r") as f:
             for line in f:
                 p = line.strip().split(",")
-                if len(p) < 7: continue
+                if len(p) < 7: continue # ignore les lignes malformees
                 fr, tid = int(p[0]), int(p[1])
                 x1, y1, x2, y2 = map(int, p[3:7])
-                tracks.setdefault(fr, []).append((tid, x1, y1, x2, y2))
+                tracks.setdefault(fr, []).append((tid, x1, y1, x2, y2)) # on constzruit tracks[frame] = [(track_id, x1,y1,x2,y2), ...]
 
+        # couleur pour dessiner les contours
         rng = np.random.default_rng(seed=42)
         palette = {tid: tuple(int(c) for c in rng.integers(40, 255, size=3))
                    for tid in {t for lst in tracks.values() for t, *_ in lst}}
@@ -1498,7 +1500,7 @@ class DataAnalysis:
                     tid = int(r["track_id"])
                     cnt = None
                     det_idx = None
-                    if "det_index" in r and not (r["det_index"] != r["det_index"]):
+                    if "det_index" in r and not (r["det_index"] != r["det_index"]): # condition pour tester que la valeur n'est pas NaN
                         det_idx = int(r["det_index"])
                     if det_idx is not None and (frame1, det_idx) in idx_map:
                         cnt = idx_map[(frame1, det_idx)]
