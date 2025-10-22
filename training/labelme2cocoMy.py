@@ -11,13 +11,19 @@ import numpy as np
 # - "unknown" -> None (ignoré)
 # - tu peux fusionner plusieurs labels vers une même classe
 MAPPING = {
-    "attached": "attached",
     "detached": "detached",
-    "occlusedAttached": "occludedAttached",
+    "occluseDetached": "detached",
     "occlusedDetached": "detached",
+    "occlusedAttached": "occludedAttached",
     "unknown": "occludedAttached",
     "attachedSide": "attached",
-    "occluseDetached": "detached"
+    "attached": "attached"
+}
+# Mapping fixe pour les IDs
+category_ids = {
+    "detached": 0,
+    "occludedAttached": 1,
+    "attached": 2
 }
 
 
@@ -35,12 +41,17 @@ def labelme2coco(labelme_folder, output_json):
     final_labels = sorted(set(v for v in MAPPING.values() if v is not None))
 
     # Ajout des catégories COCO
-    for i, label in enumerate(final_labels, 1):
-        data["categories"].append({
-            "id": i,
-            "name": label,
-            "supercategory": "bubble"
-        })
+    # for i, label in enumerate(final_labels, 1):
+    #     data["categories"].append({
+    #         "id": i,
+    #         "name": label,
+    #         "supercategory": "bubble"
+    #     })
+    # Création des catégories COCO avec IDs fixes
+    data["categories"] = [
+        {"id": category_ids[label], "name": label, "supercategory": "bubble"}
+        for label in sorted(set(MAPPING.values()) if MAPPING else [])
+    ]
 
     ann_id = 1
     for i, json_file in enumerate(glob.glob(os.path.join(labelme_folder, "*.json"))):
@@ -76,7 +87,8 @@ def labelme2coco(labelme_folder, output_json):
             ann = {
                 "id": ann_id,
                 "image_id": i,
-                "category_id": final_labels.index(label) + 1,
+                # "category_id": final_labels.index(label) + 1,
+                "category_id": category_ids[label],
                 "segmentation": segmentation,
                 "bbox": [float(xmin), float(ymin), float(width), float(height)],
                 "area": area,

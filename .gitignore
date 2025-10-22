@@ -1,0 +1,8 @@
+MODELS/**
+training/DATASETS/** 
+training/help/** 
+training/output/** 
+My_output/** 
+*.mp4
+*.pth
+*.avi

@@ -1520,7 +1520,7 @@ class DataAnalysis:
                             if best_iou >= iou_match_thresh and best_cnt is not None:
                                 cnt = best_cnt
 
-                    classID = r["class_id"]
+                    classID = int(r["class_id"])
                     if classID == ATTACHED:
                         className = 'A'
                     elif classID == DETACHED:
@@ -1529,6 +1529,7 @@ class DataAnalysis:
                         className = 'U'
                     else:
                         className = '!'
+                        print(classID, "A", ATTACHED, "D", DETACHED, "U", UNKNOWN)
                     if cnt is not None:
                         to_draw.append((tid, cnt, className))
             else:
