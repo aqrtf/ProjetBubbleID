@@ -223,7 +223,9 @@ class DataAnalysis:
         """
 
         # carica il frame
-        img_path = os.path.join(self.imagesfolder, f"frame_{frame_idx:03d}.jpg")
+        # img_path = os.path.join(self.imagesfolder, f"frame_{frame_idx:03d}.jpg")
+        img_pathes = [f for f in os.listdir(self.imagesfolder) if (f.endswith(".png") or f.endswith(".jpg") or f.endswith(".jpeg"))]
+        img_path = os.path.join(self.imagesfolder, img_pathes[frame_idx])
         img_bgr = cv2.imread(img_path, cv2.IMREAD_UNCHANGED)
         if img_bgr is None:
             raise FileNotFoundError(f"Frame non trovato: {img_path}")
