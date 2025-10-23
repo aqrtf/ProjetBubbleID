@@ -11,7 +11,7 @@ setup_logger()
 
 # import some common libraries
 import numpy as np
-import os, json, cv2, random
+import os, json, cv2, random, csv
 
 # import some common detectron2 utilities
 from detectron2 import model_zoo, structures
@@ -56,7 +56,6 @@ from scipy.fft import fft2, fftfreq
 from scipy.ndimage import gaussian_filter
 from tqdm import tqdm
 import cv2
-import numpy as np
 
 import torch, detectron2
 from detectron2.utils.logger import setup_logger
@@ -150,13 +149,14 @@ class DataAnalysis:
         self.modeldirectory, self.modelweights = os.path.split(modelweightsloc)
         self.device = device
         
-    def trimVideo(self, N_frames_extr=50):
+    def trimVideo(self, N_frames_extr=50, imageFormat="jpg"):
         """Take a subvideo of the whole one and save each frame separately for the following analysis. 
             Determine the time of each frame and save in time
 
         Args:
             N_frames_extr (int, optional): The number of frames taken for the analysis. 
             Takes the first one. Defaults to 50.
+            imageFormat (str): Format of the saved images, default "jpg", can be "png"
         Outs:
             Time_xxx.csv : the time at each frame
             
@@ -172,16 +172,21 @@ class DataAnalysis:
             if not ret:
                 print(f"Si sono estratti solo {idx} frame, stop.")
                 break
-            cv2.imwrite(os.path.join(self.imagesfolder, f"frame_{idx:03d}.jpg"), frame)
+            cv2.imwrite(os.path.join(self.imagesfolder, f"frame_{idx:03d}." +imageFormat), frame)
             time[idx] = cap.get(cv2.CAP_PROP_POS_MSEC) # read the time of each frame
         cap.release()
         print(f"Estratti {min(idx+1,N_frames_extr)} frame in '{self.imagesfolder}'")
 
-        # create a df for the time
+        # create a csv for the time
         time = time[:N_frames_extr] # reshape the array if there is not enough frame
-        df_time = pd.DataFrame({"Frame": range(N_frames_extr), "Time_ms": time})
         timePath = os.path.join(self.savefolder, f"time_{self.extension}.csv")
-        df_time.to_csv(timePath, index=False)
+
+        with open(timePath, mode='w', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerow(["Frame", "Time_ms"])
+            for i, t in enumerate(time):
+                writer.writerow([i, t])
+
 
         # save the video with only the selected frames
         dst = os.path.join(self.imagesfolder, "..", "trimmed_50.avi")
