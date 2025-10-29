@@ -6,3 +6,7 @@ My_output/**
 *.mp4
 *.pth
 *.avi
+
+# Dont ignore this
+!My_output/Test6
+!My_output/Test6/*
