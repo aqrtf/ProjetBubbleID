@@ -26,7 +26,7 @@ N_FRAMES_POST_DISAPPEAR = 2
 # -----------------------------DATA------------------------------------
 # Dossier ou sont sauvegarde les donnee apres le modele
 dataFolder = r"C:\Users\faraboli\Desktop\BubbleID\BubbleIDGit\ProjetBubbleID\My_output\SaveData2"
-extension = "Test6"
+extension = "Test7"
 contourFile = dataFolder + "/contours_" + extension +".json"  # Fichier des contours
 richFile = dataFolder + "/rich_" + extension +".csv"  # Fichier de tracking
 

@@ -1579,6 +1579,7 @@ class DataAnalysis:
                 cy = int(np.mean(cnt[:, 1]))
                 cv2.putText(img, className+str(tid), (cx + 3, cy - 3), cv2.FONT_HERSHEY_SIMPLEX, 0.8, color, 2, cv2.LINE_AA)
 
+            cv2.putText(img, str(idx+1) , (10,20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,0), 1, cv2.LINE_AA)
             writer.write(img)
 
         writer.release()
