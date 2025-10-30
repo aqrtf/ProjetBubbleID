@@ -6,8 +6,6 @@ from collections import defaultdict
 
 # --------------------------PARAMÈTRES------------------------
 IMAGE_SHAPE = (1024, 1024)  # Dimensions des images (hauteur, largeur)
-W_PREV = 3  # Fenêtre temporelle : nombre de frames à regarder en arrière
-W_NEXT = 3  # Fenêtre temporelle : nombre de frames à regarder en avant
 DILATE_ITERS = 1  # Nombre d'itérations de dilatation pour les masques
 KERNEL = np.ones((3, 3), np.uint8)  # Noyau pour les opérations morphologiques
 OVERLAP_THRESH = 0.1  # Seuil minimum de chevauchement pour considérer une relation parent-enfant
@@ -19,14 +17,14 @@ POST_FUSION_FRAMES = 2  # Frames après fusion pour consolidation du masque
 
 # Les bulles parents ne disparraissent pas toujours juste au moment de la fusion
 # Parfois elles ne sont plus detecte plusieurs frames avant
-N_FRAMES_PREVIOUS_DISAPPEAR = 2
+N_FRAMES_PREVIOUS_DISAPPEAR = 3
 # Et parfois elle restent detectees sur une ou deux frame avec le child
 N_FRAMES_POST_DISAPPEAR = 2
 
 # -----------------------------DATA------------------------------------
 # Dossier ou sont sauvegarde les donnee apres le modele
-dataFolder = r"C:\Users\faraboli\Desktop\BubbleID\BubbleIDGit\ProjetBubbleID\My_output\SaveData2"
-extension = "Test7"
+dataFolder = r"C:\Users\faraboli\Desktop\BubbleID\BubbleIDGit\ProjetBubbleID\My_output\SaveData3"
+extension = "T113_2_40V_2"
 contourFile = dataFolder + "/contours_" + extension +".json"  # Fichier des contours
 richFile = dataFolder + "/rich_" + extension +".csv"  # Fichier de tracking
 
@@ -78,7 +76,7 @@ def load_json_contours(json_path):
     
     return parsed
 
-def build_masks_and_index(json_path, csv_path, image_shape=IMAGE_SHAPE):
+def build_masks_and_index(json_path, csv_path, image_shape=IMAGE_SHAPE, score_thres = 0.7):
     """
     Construit un index des masques organisé par frame et track_id
     Retourne: dict[frame][track_id] = mask
@@ -93,15 +91,22 @@ def build_masks_and_index(json_path, csv_path, image_shape=IMAGE_SHAPE):
         row = df[(df['frame'] == frame) & (df['det_in_frame'] == det_in_frame)]
         if row.empty:  # Si pas de correspondance, on ignore
             continue
-        
-        track_id = int(row.iloc[0]['track_id'])  # Récupère le track_id
-        mask = mask_from_contour(contour, image_shape)  # Crée le masque
-        if np.sum(mask > 0) == 0:  # Vérifie que le masque n'est pas vide
-            continue
-        
-        # Stocke le masque dans la structure indexée
-        data_by_frame[frame][track_id] = mask
-    
+        # On ne considere pas les prediction qui ont un score trop faible
+        for i in row["score"]:
+            if i < float(score_thres):  # <<<<<<<<<<<<<< filtro
+                continue
+
+            track_id = int(row.iloc[0]['track_id'])  # Récupère le track_id
+            mask = mask_from_contour(contour, image_shape)  # Crée le masque
+            if np.sum(mask > 0) == 0:  # Vérifie que le masque n'est pas vide
+                continue
+            
+            # Stocke le masque dans la structure indexée
+            data_by_frame[frame][track_id] = mask 
+            # NOTE si les deux scores sont valables, on ecrase le premier, 
+            # ca ne devrait pas poser pb car si les deux ont le meme tid
+            # ils ont des mask similaire mais un etat different
+
     return data_by_frame
 
 # ------------------------
@@ -152,7 +157,8 @@ def my_detect_fusion(json_path, csv_path, image_shape=IMAGE_SHAPE):
         if frame not in bulleApparue or not bulleApparue[frame]:
             continue
             
-        print(f"Analyse frame {frame}: {len(bulleApparue[frame])} nouvelle(s) bulle(s)")
+        print(f"Frame {frame}:\n\t{len(bulleApparue[frame])} new bubbles: {bulleApparue[frame]}")
+        print(f"\tBubbles disappear btw frame {frame-N_FRAMES_PREVIOUS_DISAPPEAR} and {frame+N_FRAMES_POST_DISAPPEAR}:")
         
         for new_tid in bulleApparue[frame]:
             if new_tid not in data_by_frame[frame]:
@@ -178,6 +184,7 @@ def my_detect_fusion(json_path, csv_path, image_shape=IMAGE_SHAPE):
             # Chercher les parents dans les frames autour (frame-1, frame, frame+1)
             for search_frame in range(frame-N_FRAMES_PREVIOUS_DISAPPEAR, frame+1+N_FRAMES_POST_DISAPPEAR):
                 if search_frame in bulleDisparue and bulleDisparue[search_frame]:
+                    print(f"\t\tFrame {search_frame}: {bulleDisparue[search_frame]}")
                     for dis_tid in bulleDisparue[search_frame]:
                         # Vérifier que le parent existe dans les données
                         if dis_tid == new_tid: # un parent ne peut pas etre son propre fils
@@ -193,7 +200,7 @@ def my_detect_fusion(json_path, csv_path, image_shape=IMAGE_SHAPE):
                             
                             if ratio > OVERLAP_THRESH:
                                 parentsDict[frame][new_tid].append(dis_tid)
-                                print(f"  Parent trouvé: {dis_tid} (frame {search_frame}) -> {new_tid}, ratio: {ratio:.3f}")
+                                print(f"\t\t\tParent trouvé: {dis_tid} (frame {search_frame}) -> {new_tid}, ratio: {ratio:.3f}")
     
     # NETTOYAGE : retirer les entrées vides et celles avec moins de 2 parents
     parentsDict_clean = {}
