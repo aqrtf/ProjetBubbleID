@@ -4,15 +4,33 @@ import numpy as np
 import cv2
 from collections import defaultdict
 
-# ------------------------
-# PARAMÈTRES
-# ------------------------
+# --------------------------PARAMÈTRES------------------------
 IMAGE_SHAPE = (1024, 1024)  # Dimensions des images (hauteur, largeur)
 W_PREV = 3  # Fenêtre temporelle : nombre de frames à regarder en arrière
 W_NEXT = 3  # Fenêtre temporelle : nombre de frames à regarder en avant
 DILATE_ITERS = 1  # Nombre d'itérations de dilatation pour les masques
 KERNEL = np.ones((3, 3), np.uint8)  # Noyau pour les opérations morphologiques
 OVERLAP_THRESH = 0.1  # Seuil minimum de chevauchement pour considérer une relation parent-enfant
+
+# Pour ameliorer la robustesse on ne prends pas que le mask de la nouvelle bulle 
+# a son apparition mais aussi sur les qq frames suivantes. En effet, le tracking 
+# n'est pas toujours complet
+POST_FUSION_FRAMES = 2  # Frames après fusion pour consolidation du masque
+
+# Les bulles parents ne disparraissent pas toujours juste au moment de la fusion
+# Parfois elles ne sont plus detecte plusieurs frames avant
+N_FRAMES_PREVIOUS_DISAPPEAR = 2
+# Et parfois elle restent detectees sur une ou deux frame avec le child
+N_FRAMES_POST_DISAPPEAR = 2
+
+# -----------------------------DATA------------------------------------
+# Dossier ou sont sauvegarde les donnee apres le modele
+dataFolder = r"C:\Users\faraboli\Desktop\BubbleID\BubbleIDGit\ProjetBubbleID\My_output\SaveData2"
+extension = "Test6"
+contourFile = dataFolder + "/contours_" + extension +".json"  # Fichier des contours
+richFile = dataFolder + "/rich_" + extension +".csv"  # Fichier de tracking
+
+outputFilePath = dataFolder + "/fusionHistory_" + extension + ".txt"
 
 
 # ------------------------
@@ -29,12 +47,18 @@ def mask_from_contour(contour, shape):
         mask = cv2.dilate(mask, KERNEL, iterations=DILATE_ITERS)
     return mask
 
+def mask_area(mask):
+    return np.sum(mask>0)
+
 def overlap_ratio(mask1, mask2):
     """Calcule le ratio de chevauchement entre deux masques"""
     inter = np.logical_and(mask1 > 0, mask2 > 0)  # Intersection des deux masques
-    area1 = np.sum(mask1 > 0)  # Aire du premier masque
-    # Retourne le ratio d'intersection par rapport à l'aire du premier masque TODO pk le 1er
-    return np.sum(inter) / area1 if area1 > 0 else 0.0
+    interArea = mask_area(inter)
+    area1 = mask_area(mask1)  # Aire du premier masque
+    area2 = mask_area(mask2)
+    childArea = area1 if area1>area2 else area2 
+    # Retourne le ratio d'intersection par rapport à l'aire du premier masque 
+    return interArea / childArea if childArea > 0 else 0.0
 
 # ------------------------
 # CHARGEMENT DES DONNÉES
@@ -95,21 +119,23 @@ def bulle_changement(data_by_frame):
         # WARNING si les frame ne sont pas successive il peux y avoir un probleme
         if frame == 1: #La frame 1 ne nous interresse pas
             continue
-        current_track_id = list(data_by_frame[frame].keys())
-        previous_track_id = list(data_by_frame[frame-1].keys())
-        # on cherche les bulles qui disparraissent entre le previous et current
-        bulleDisparue[frame] = []
-        for x in previous_track_id:
-            if x not in current_track_id:
-                bulleDisparue[frame].append(x)
-        # on cherche les bulles qui apparaissent entre le previous et current
-        bulleApparue[frame] = []
-        for x in current_track_id:
-            if x not in previous_track_id:
-                bulleApparue[frame].append(x)
+        previous_frame = frame - 1
+        if previous_frame not in data_by_frame:  # TODO Gérer si frames manquantes
+            print("no previous frame find at frame ", frame)
+            continue
+
+        current_track_ids = set(data_by_frame[frame].keys())
+        previous_track_ids = set(data_by_frame[previous_frame].keys())
+        
+        # Bulles qui disparaissent entre previous et current
+        bulleDisparue[frame] = list(previous_track_ids - current_track_ids)
+        
+        # Bulles qui apparaissent entre previous et current  
+        bulleApparue[frame] = list(current_track_ids - previous_track_ids)
     # print(bulleDisparue)
     # print(bulleApparue)
     return bulleDisparue, bulleApparue
+
 
 def my_detect_fusion(json_path, csv_path, image_shape=IMAGE_SHAPE):
     """Détecte les fusions de bulles en analysant les chevauchements temporels
@@ -117,101 +143,90 @@ def my_detect_fusion(json_path, csv_path, image_shape=IMAGE_SHAPE):
     """
     # Construit l'index des masques par frame
     data_by_frame = build_masks_and_index(json_path, csv_path, image_shape)
-    fusion_map = {}  # Stocke les résultats des fusions détectées
     bulleDisparue, bulleApparue = bulle_changement(data_by_frame)
     frames = sorted(data_by_frame.keys())  # Liste triée des frames disponibles
 
     parentsDict = defaultdict(dict) # frame->new_tid->parents
-    for i, frame in enumerate(frames[2:]):
-        for new_tid in bulleApparue[frame]:
-            child_mask = data_by_frame[frame][new_tid]
-            parentsDict[frame][new_tid] = []
-            for dis_tid in bulleDisparue[(frame-1):(frame+2)]:
-                parent_mask = data_by_frame[frame][dis_tid]  # Masque du parent potentiel
-                ratio = overlap_ratio(parent_mask, child_mask)  # Calcule le chevauchement
-                if ratio > OVERLAP_THRESH:  # Si le chevauchement dépasse le seuil
-                    parentsDict[frame][new_tid].append(dis_tid)  # Ajoute aux parents  
-            print(data_by_frame[frame][new_tid])
-            break
-
-
-def detect_fusions(json_path, csv_path, image_shape=IMAGE_SHAPE):
-    """
-    Détecte les fusions de bulles en analysant les chevauchements temporels
-    Retourne: dict {new_track_id: {'parents': [parent_ids], 'frame': frame}}
-    """
-    # Construit l'index des masques par frame
-    data_by_frame = build_masks_and_index(json_path, csv_path, image_shape)
-    fusion_map = {}  # Stocke les résultats des fusions détectées
-
-    frames = sorted(data_by_frame.keys())  # Liste triée des frames disponibles
-
-
-    # Parcourt chaque frame
-    for i, frame in enumerate(frames):
-        current_bubbles = data_by_frame[frame]  # Bulles de la frame courante
-        
-        # Récupère les bulles de la frame suivante (si elle existe)
-        if i < len(frames) - 1:
-            next_bubbles = data_by_frame[frame + 1]
-        
-        # Sélectionne les frames précédentes dans la fenêtre temporelle
-        prev_frames = [f for f in frames if f < frame and f >= frame - W_PREV]
-        
-        # Agrège toutes les bulles des frames précédentes
-        previous_bubbles = {}
-        for f in prev_frames:
-            previous_bubbles.update(data_by_frame[f])
-
-        # Identifie les nouvelles bulles (celles qui n'existaient pas dans les frames précédentes)
-        new_bubbles = [tid for tid in current_bubbles if tid not in previous_bubbles]
-        
-        # Identifie les bulles disparues (celles qui existaient avant mais plus maintenant OU pas dans la frame suivante)
-        disappeared_bubbles = [tid for tid in previous_bubbles if (tid not in current_bubbles or tid not in next_bubbles)]
-
-        # Pour chaque nouvelle bulle détectée
-        for new_tid in new_bubbles:
-            # Crée un masque agrégé sur plusieurs frames futures
-            aggregated_mask = np.zeros(image_shape, dtype=np.uint8)
-            for f_next in frames:
-                if f_next < frame:  # Ignore les frames passées
-                    continue
-                if f_next > frame + W_NEXT:  # Stop si on dépasse la fenêtre
-                    break
-                if new_tid in data_by_frame[f_next]:  # Si la bulle existe dans cette frame future
-                    # Ajoute son masque au masque agrégé
-                    aggregated_mask = np.logical_or(aggregated_mask, data_by_frame[f_next][new_tid] > 0)
+    for frame in frames:
+        # Vérifier s'il y a des nouvelles bulles sur cette frame
+        if frame not in bulleApparue or not bulleApparue[frame]:
+            continue
             
-            aggregated_mask = (aggregated_mask.astype(np.uint8) * 255)  # Convertit en masque binaire
+        print(f"Analyse frame {frame}: {len(bulleApparue[frame])} nouvelle(s) bulle(s)")
+        
+        for new_tid in bulleApparue[frame]:
+            if new_tid not in data_by_frame[frame]:
+                continue
+                
+            child_mask = data_by_frame[frame][new_tid]
+            # Pour ameliorer la robustesse on ne prends pas que le mask de la nouvelle bulle 
+            # a son apparition mais aussi sur les qq frames suivantes. En effet, le tracking 
+            # n'est pas toujours complet
+            for i_frame in range(frame+1, frame+1+POST_FUSION_FRAMES):
+                # Vérifier que la bulle existe dans les données
+                if (i_frame in data_by_frame and 
+                    new_tid in data_by_frame[i_frame]): 
 
-            # Cherche les parents potentiels parmi les bulles disparues
-            parents = []
-            for parent_tid in disappeared_bubbles:
-                parent_mask = previous_bubbles[parent_tid]  # Masque du parent potentiel
-                ratio = overlap_ratio(parent_mask, aggregated_mask)  # Calcule le chevauchement
-                if ratio > OVERLAP_THRESH:  # Si le chevauchement dépasse le seuil
-                    parents.append(parent_tid)  # Ajoute aux parents
+                    child_mask = child_mask + data_by_frame[i_frame][new_tid]
 
-            # Si au moins un parent trouvé, enregistre la fusion
-            if parents:
-                fusion_map[new_tid] = {'parents': parents, 'frame': frame}
 
-    return fusion_map
+
+
+
+            parentsDict[frame][new_tid] = []
+            
+            # Chercher les parents dans les frames autour (frame-1, frame, frame+1)
+            for search_frame in range(frame-N_FRAMES_PREVIOUS_DISAPPEAR, frame+1+N_FRAMES_POST_DISAPPEAR):
+                if search_frame in bulleDisparue and bulleDisparue[search_frame]:
+                    for dis_tid in bulleDisparue[search_frame]:
+                        # Vérifier que le parent existe dans les données
+                        if dis_tid == new_tid: # un parent ne peut pas etre son propre fils
+                            continue
+                        if (search_frame-1 in data_by_frame and 
+                            dis_tid in data_by_frame[search_frame-1]): 
+                            
+                            parent_mask = data_by_frame[search_frame-1][dis_tid] 
+                            if mask_area(child_mask) <= mask_area(parent_mask): # la nouvelle bulle doit etre plus grandes que ses parents
+                                continue
+
+                            ratio = overlap_ratio(parent_mask, child_mask)
+                            
+                            if ratio > OVERLAP_THRESH:
+                                parentsDict[frame][new_tid].append(dis_tid)
+                                print(f"  Parent trouvé: {dis_tid} (frame {search_frame}) -> {new_tid}, ratio: {ratio:.3f}")
+    
+    # NETTOYAGE : retirer les entrées vides et celles avec moins de 2 parents
+    parentsDict_clean = {}
+    for frame, tracks in parentsDict.items():
+        # Filtrer pour garder seulement les tracks avec au moins 2 parents
+        tracks_with_min_2_parents = {
+            track_id: parents 
+            for track_id, parents in tracks.items() 
+            if len(parents) >= 2
+        }
+        # Ne garder la frame que si elle contient au moins une track valide
+        if tracks_with_min_2_parents:
+            parentsDict_clean[frame] = tracks_with_min_2_parents
+    
+    print("\nRésultats des fusions détectées:")
+    for frame, tracks in parentsDict_clean.items():
+        for new_tid, parents in tracks.items():
+            print(f"Frame {frame:3d}: {new_tid:3d} ← {parents}")
+    
+    return parentsDict_clean
+
+def exportData(parentsDict, outputFile):
+    with open(outputFile, 'w') as file:
+        file.write(f"{len(parentsDict)} fusions detect:\n")
+        for frame, tracks in parentsDict.items():
+            for new_tid, parents in tracks.items():
+                file.write(f"Frame {frame:3d}: {new_tid:3d} <- {parents}\n")
 
 # ------------------------
 # EXÉCUTION
 # ------------------------
-# Dossier ou sont sauvegarde les donnee apres le modele
-dataFolder = r"C:\Users\faraboli\Desktop\BubbleID\BubbleIDGit\ProjetBubbleID\My_output\SaveData2"
-extension = "Test6"
-contourFile = dataFolder + "/contours_" + extension +".json"  # Fichier des contours
-richFile = dataFolder + "/rich_" + extension +".csv"  # Fichier de tracking
+
 
 # Lance la détection des fusions
-fusions = detect_fusions(contourFile, richFile, IMAGE_SHAPE)
-my_detect_fusion(contourFile, richFile, IMAGE_SHAPE)
-# Affiche les résultats (seulement les fusions avec exactement 2 parents)
-print("Fusions détectées :")
-for new_bubble, info in fusions.items():
-    if len(info['parents']) == 2:  # Filtre seulement les fusions à 2 parents
-        print(f"Frame {info['frame']} : child {new_bubble} ← parents {info['parents']}")
+parentsDict = my_detect_fusion(contourFile, richFile, IMAGE_SHAPE)
+exportData(parentsDict, outputFilePath)
