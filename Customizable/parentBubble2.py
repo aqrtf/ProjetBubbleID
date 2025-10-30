@@ -1,3 +1,6 @@
+# TODO il ne faut pas que l'intersection des parents soit trop importante
+
+
 import json
 import pandas as pd
 import numpy as np
@@ -20,6 +23,8 @@ POST_FUSION_FRAMES = 2  # Frames après fusion pour consolidation du masque
 N_FRAMES_PREVIOUS_DISAPPEAR = 3
 # Et parfois elle restent detectees sur une ou deux frame avec le child
 N_FRAMES_POST_DISAPPEAR = 2
+
+score_thres = 0.7 #Minimum prediction score to have to consider a bubble
 
 # -----------------------------DATA------------------------------------
 # Dossier ou sont sauvegarde les donnee apres le modele
@@ -142,16 +147,16 @@ def bulle_changement(data_by_frame):
     return bulleDisparue, bulleApparue
 
 
-def my_detect_fusion(json_path, csv_path, image_shape=IMAGE_SHAPE):
+def my_detect_fusion(json_path, csv_path, image_shape=IMAGE_SHAPE, score_thresh=.7):
     """Détecte les fusions de bulles en analysant les chevauchements temporels
     Retourne: dict {new_track_id: {'parents': [parent_ids], 'frame': frame}}
     """
     # Construit l'index des masques par frame
-    data_by_frame = build_masks_and_index(json_path, csv_path, image_shape)
+    data_by_frame = build_masks_and_index(json_path, csv_path, image_shape, score_thresh)
     bulleDisparue, bulleApparue = bulle_changement(data_by_frame)
     frames = sorted(data_by_frame.keys())  # Liste triée des frames disponibles
 
-    parentsDict = defaultdict(dict) # frame->new_tid->parents
+    parentsDict = defaultdict(dict) # frame->new_tid-> (parents_id, frame_parents)
     for frame in frames:
         # Vérifier s'il y a des nouvelles bulles sur cette frame
         if frame not in bulleApparue or not bulleApparue[frame]:
@@ -176,9 +181,6 @@ def my_detect_fusion(json_path, csv_path, image_shape=IMAGE_SHAPE):
                     child_mask = child_mask + data_by_frame[i_frame][new_tid]
 
 
-
-
-
             parentsDict[frame][new_tid] = []
             
             # Chercher les parents dans les frames autour (frame-1, frame, frame+1)
@@ -199,7 +201,7 @@ def my_detect_fusion(json_path, csv_path, image_shape=IMAGE_SHAPE):
                             ratio = overlap_ratio(parent_mask, child_mask)
                             
                             if ratio > OVERLAP_THRESH:
-                                parentsDict[frame][new_tid].append(dis_tid)
+                                parentsDict[frame][new_tid].append((dis_tid, search_frame-1))
                                 print(f"\t\t\tParent trouvé: {dis_tid} (frame {search_frame}) -> {new_tid}, ratio: {ratio:.3f}")
     
     # NETTOYAGE : retirer les entrées vides et celles avec moins de 2 parents
@@ -214,11 +216,18 @@ def my_detect_fusion(json_path, csv_path, image_shape=IMAGE_SHAPE):
         # Ne garder la frame que si elle contient au moins une track valide
         if tracks_with_min_2_parents:
             parentsDict_clean[frame] = tracks_with_min_2_parents
+
+            if mask_area(np.logical_and(data_by_frame[parentsDict_clean[frame][1]][parentsDict_clean[frame][0]])):
+                pass
     
     print("\nRésultats des fusions détectées:")
     for frame, tracks in parentsDict_clean.items():
-        for new_tid, parents in tracks.items():
-            print(f"Frame {frame:3d}: {new_tid:3d} ← {parents}")
+        for new_tid, parents_tuple in tracks.items():
+            print(f"Frame {frame:3d}: {new_tid:3d} <- {parents_tuple}")
+            # print(f"Frame {frame:3d}: {new_tid:3d} ← [", end="")
+            # for id, _ in parents_tuple:
+            #     print(id, end="," )
+            # print("]")
     
     return parentsDict_clean
 
@@ -226,8 +235,8 @@ def exportData(parentsDict, outputFile):
     with open(outputFile, 'w') as file:
         file.write(f"{len(parentsDict)} fusions detect:\n")
         for frame, tracks in parentsDict.items():
-            for new_tid, parents in tracks.items():
-                file.write(f"Frame {frame:3d}: {new_tid:3d} <- {parents}\n")
+            for new_tid, parents_tuple in tracks.items():
+                file.write(f"Frame {frame:3d}: {new_tid:3d} <- {parents_tuple}\n") # !!!!! on affiche pas la bonne chose
 
 # ------------------------
 # EXÉCUTION
@@ -235,5 +244,5 @@ def exportData(parentsDict, outputFile):
 
 
 # Lance la détection des fusions
-parentsDict = my_detect_fusion(contourFile, richFile, IMAGE_SHAPE)
+parentsDict = my_detect_fusion(contourFile, richFile, IMAGE_SHAPE, score_thres)
 exportData(parentsDict, outputFilePath)
