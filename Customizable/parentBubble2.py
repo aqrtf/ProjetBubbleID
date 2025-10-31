@@ -31,10 +31,10 @@ MAX_IOU_PARENTS = 0.7 #maximum intersection over union between two parents
 # -----------------------------DATA------------------------------------
 # Dossier ou sont sauvegarde les donnee apres le modele
 dataFolder = r"C:\Users\faraboli\Desktop\BubbleID\BubbleIDGit\ProjetBubbleID\My_output\SaveData3"
-extension = "T113_2_40V_2"
+extension = "T113_2_60V_2"
+
 contourFile = dataFolder + "/contours_" + extension +".json"  # Fichier des contours
 richFile = dataFolder + "/rich_" + extension +".csv"  # Fichier de tracking
-
 outputFileHistoryPath = dataFolder + "/fusionHistory_" + extension + ".txt"
 outputFileResultPath = dataFolder + "/fusionResult_" + extension + ".txt"
 
@@ -55,15 +55,21 @@ def mask_from_contour(contour, shape):
 def mask_area(mask):
     return np.sum(mask>0)
 
-def overlap_ratio(mask1, mask2):
+def overlap_ratio(mask1, mask2, reference):
     """Calcule le ratio de chevauchement entre deux masques"""
     inter = np.logical_and(mask1 > 0, mask2 > 0)  # Intersection des deux masques
     interArea = mask_area(inter)
     area1 = mask_area(mask1)  # Aire du premier masque
     area2 = mask_area(mask2)
-    childArea = area1 if area1>area2 else area2 
-    # Retourne le ratio d'intersection par rapport à l'aire du premier masque 
-    return interArea / childArea if childArea > 0 else 0.0
+    if reference == "biggest":
+        refArea = area1 if area1>area2 else area2
+    elif reference == "smallest":
+        refArea = area1 if area1<area2 else area2 
+    else:
+        raise("reference must be either 'biggest' or 'smallest'")
+
+    # Retourne le ratio d'intersection par rapport à l'aire de la reference
+    return interArea / refArea if refArea > 0 else 0.0
 
 # ------------------------
 # CHARGEMENT DES DONNÉES
@@ -149,7 +155,7 @@ def bulle_changement(data_by_frame):
     return bulleDisparue, bulleApparue
 
 
-def filtrer_parents_par_iou(parents_ids, frame_parents, masques_dict, seuil_iou):
+def filtrer_parents_par_intersection(parents_ids, frame_parents, masques_dict, seuil_iou):
     """
     Calcule les intersections deux à deux et retire les parents avec trop de chevauchement
     """
@@ -167,7 +173,7 @@ def filtrer_parents_par_iou(parents_ids, frame_parents, masques_dict, seuil_iou)
     
     for i in range(n):
         for j in range(i + 1, n):
-            iou = _calculer_iou_masques(masques_parents[i], masques_parents[j])
+            iou = overlap_ratio(masques_parents[i], masques_parents[j], reference="smallest")
             iou_matrix[i, j] = iou
             iou_matrix[j, i] = iou
     
@@ -192,18 +198,6 @@ def filtrer_parents_par_iou(parents_ids, frame_parents, masques_dict, seuil_iou)
 
     return parents_ids
 
-def _calculer_iou_masques(masque1, masque2):
-    """Calcule l'IOU entre deux masques binaires"""
-    intersection = np.logical_and(masque1, masque2)
-    union = np.logical_or(masque1, masque2)
-    
-    surface_intersection = mask_area(intersection)
-    surface_union = mask_area(union)
-    
-    if surface_union == 0:
-        return 0.0
-    
-    return surface_intersection / surface_union
 
 def my_detect_fusion(json_path, csv_path, outputFile, image_shape=IMAGE_SHAPE, score_thresh=.7, seuil_iou=.7 ):
     """Détecte les fusions de bulles en analysant les chevauchements temporels
@@ -259,7 +253,7 @@ def my_detect_fusion(json_path, csv_path, outputFile, image_shape=IMAGE_SHAPE, s
                             if mask_area(child_mask) <= mask_area(parent_mask): # la nouvelle bulle doit etre plus grandes que ses parents
                                 continue
 
-                            ratio = overlap_ratio(parent_mask, child_mask)
+                            ratio = overlap_ratio(parent_mask, child_mask, reference='biggest')
                             
                             if ratio > OVERLAP_THRESH:
                                 parentsDict[frame][new_tid].append(ParentInfo(parent_id=dis_tid, frame_parent=search_frame-1))
@@ -288,7 +282,7 @@ def my_detect_fusion(json_path, csv_path, outputFile, image_shape=IMAGE_SHAPE, s
                 frames_parents = [info.frame_parent for info in parents_list]
                 
                 # Appliquer le filtrage IOU
-                parents_filtres = filtrer_parents_par_iou(
+                parents_filtres = filtrer_parents_par_intersection(
                     list(parents_ids), 
                     list(frames_parents), 
                     data_by_frame, 
