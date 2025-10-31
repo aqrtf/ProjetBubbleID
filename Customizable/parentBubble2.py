@@ -31,7 +31,7 @@ MAX_OVERLAP_PARENTS = 0.7 #maximum intersection over union between two parents
 # -----------------------------DATA------------------------------------
 # Dossier ou sont sauvegarde les donnee apres le modele
 dataFolder = r"C:\Users\faraboli\Desktop\BubbleID\BubbleIDGit\ProjetBubbleID\My_output\SaveData3"
-extension = "T113_2_100V_1"
+extension = "T113_2_60V_2"
 
 contourFile = dataFolder + "/contours_" + extension +".json"  # Fichier des contours
 richFile = dataFolder + "/rich_" + extension +".csv"  # Fichier de tracking
@@ -167,7 +167,7 @@ def filtrer_parents_par_intersection(parents_ids, frame_parents, masques_dict, s
             masque = masques_dict[frame_parent][parent_id]
             masques_parents.append(masque)
     
-    # Matrice d'IOU entre toutes les paires
+    # Matrice d'overlap entre toutes les paires
     n = len(masques_parents)
     iou_matrix = np.zeros((n, n))
     
@@ -177,7 +177,7 @@ def filtrer_parents_par_intersection(parents_ids, frame_parents, masques_dict, s
             iou_matrix[i, j] = iou
             iou_matrix[j, i] = iou
     
-    # Identifier les parents à retirer (IOU trop élevé)
+    # Identifier les parents à retirer (overlap trop élevé)
     a_retirer = set()
     
     for i in range(n):
@@ -259,8 +259,15 @@ def my_detect_fusion(json_path, csv_path, outputFile, image_shape=IMAGE_SHAPE, s
                                 parentsDict[frame][new_tid].append(ParentInfo(parent_id=dis_tid, frame_parent=search_frame-1))
                                 outputFile.write(f"\t\t\tFound parent: {dis_tid} (frame {search_frame}) -> {new_tid}, ratio: {ratio:.3f}\n")
 
+    outputFile.write("##########################################################\n")
+    outputFile.write(f"Results before cleaning: {len(parentsDict)} fusions detect:\n")
+    for frame, tracks in parentsDict.items():
+        for new_tid, parents in tracks.items():
+            outputFile.write(f"\tFrame {frame:3d}: {new_tid:3d} <- {[info.frame_parent for info in parents]}\n")
+
 
     # NETTOYAGE : retirer les entrées vides et celles avec moins de 2 parents
+    outputFile.write("##########################################################\nCleaning:\n")
     parentsDict_clean = {}
     parentsDict_clean2 = defaultdict(dict)
 
@@ -276,12 +283,12 @@ def my_detect_fusion(json_path, csv_path, outputFile, image_shape=IMAGE_SHAPE, s
         if tracks_with_min_2_parents:
             parentsDict_clean[frame] = tracks_with_min_2_parents
 
-            # Retirer les parents s'ils sont trop proche l'un de l'autre (par IOU)
+            # Retirer les parents s'ils sont trop proche l'un de l'autre 
             for new_tid, parents_list in parentsDict_clean[frame].items():
                 parents_ids = [info.parent_id for info in parents_list]
                 frames_parents = [info.frame_parent for info in parents_list]
                 
-                # Appliquer le filtrage IOU
+                # Appliquer le filtrage
                 parents_filtres = filtrer_parents_par_intersection(
                     list(parents_ids), 
                     list(frames_parents), 
@@ -301,7 +308,8 @@ def my_detect_fusion(json_path, csv_path, outputFile, image_shape=IMAGE_SHAPE, s
     }
 
     print("\nRésultats des fusions détectées:")
-    outputFile.write("##########################################################\nResults:\n")
+    outputFile.write("##########################################################\n")
+    outputFile.write(f"Results: {len(parentsDict_clean2)} fusions detect:\n")
     for frame, tracks in parentsDict_clean2.items():
         for new_tid, parents in tracks.items():
             print(f"Frame {frame:3d}: {new_tid:3d} <- {parents}")
