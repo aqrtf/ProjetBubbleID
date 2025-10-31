@@ -6,6 +6,7 @@ import pandas as pd
 import numpy as np
 import cv2
 from collections import defaultdict
+from dataclasses import dataclass
 
 # --------------------------PARAMÈTRES------------------------
 IMAGE_SHAPE = (1024, 1024)  # Dimensions des images (hauteur, largeur)
@@ -25,6 +26,7 @@ N_FRAMES_PREVIOUS_DISAPPEAR = 3
 N_FRAMES_POST_DISAPPEAR = 2
 
 score_thres = 0.7 #Minimum prediction score to have to consider a bubble
+MAX_IOU_PARENTS = 0.7 #maximum intersection over union between two parents
 
 # -----------------------------DATA------------------------------------
 # Dossier ou sont sauvegarde les donnee apres le modele
@@ -33,8 +35,8 @@ extension = "T113_2_40V_2"
 contourFile = dataFolder + "/contours_" + extension +".json"  # Fichier des contours
 richFile = dataFolder + "/rich_" + extension +".csv"  # Fichier de tracking
 
-outputFilePath = dataFolder + "/fusionHistory_" + extension + ".txt"
-
+outputFileHistoryPath = dataFolder + "/fusionHistory_" + extension + ".txt"
+outputFileResultPath = dataFolder + "/fusionResult_" + extension + ".txt"
 
 # ------------------------
 # UTILITAIRES
@@ -147,22 +149,17 @@ def bulle_changement(data_by_frame):
     return bulleDisparue, bulleApparue
 
 
-def filtrer_parents_par_iou(parents_ids, frame_parents, masques_dict, seuil_iou=0.7):
+def filtrer_parents_par_iou(parents_ids, frame_parents, masques_dict, seuil_iou):
     """
     Calcule les intersections deux à deux et retire les parents avec trop de chevauchement
     """
     masques_parents = []
-    donnees_valides = []
     
     # Récupérer les masques valides
     for parent_id, frame_parent in zip(parents_ids, frame_parents):
         if frame_parent in masques_dict and parent_id in masques_dict[frame_parent]:
             masque = masques_dict[frame_parent][parent_id]
             masques_parents.append(masque)
-            donnees_valides.append((parent_id, frame_parent))
-    
-    if len(masques_parents) < 2:
-        return donnees_valides, masques_parents
     
     # Matrice d'IOU entre toutes les paires
     n = len(masques_parents)
@@ -188,32 +185,27 @@ def filtrer_parents_par_iou(parents_ids, frame_parents, masques_dict, seuil_iou=
                     a_retirer.add(i)
                 else:
                     a_retirer.add(j)
-    
-    # Filtrer les listes
-    parents_filtres = []
-    masques_filtres = []
-    
-    for idx, (donnees, masque) in enumerate(zip(donnees_valides, masques_parents)):
-        if idx not in a_retirer:
-            parents_filtres.append(donnees)
-            masques_filtres.append(masque)
-    
-    return parents_filtres, masques_filtres
+
+    # Supprimer en partant du plus grand index pour éviter les décalages
+    for i in sorted(a_retirer, reverse=True):
+        del parents_ids[i]
+
+    return parents_ids
 
 def _calculer_iou_masques(masque1, masque2):
     """Calcule l'IOU entre deux masques binaires"""
     intersection = np.logical_and(masque1, masque2)
     union = np.logical_or(masque1, masque2)
     
-    surface_intersection = np.sum(intersection)
-    surface_union = np.sum(union)
+    surface_intersection = mask_area(intersection)
+    surface_union = mask_area(union)
     
     if surface_union == 0:
         return 0.0
     
     return surface_intersection / surface_union
 
-def my_detect_fusion(json_path, csv_path, image_shape=IMAGE_SHAPE, score_thresh=.7):
+def my_detect_fusion(json_path, csv_path, outputFile, image_shape=IMAGE_SHAPE, score_thresh=.7, seuil_iou=.7 ):
     """Détecte les fusions de bulles en analysant les chevauchements temporels
     Retourne: dict {new_track_id: {'parents': [parent_ids], 'frame': frame}}
     """
@@ -222,14 +214,20 @@ def my_detect_fusion(json_path, csv_path, image_shape=IMAGE_SHAPE, score_thresh=
     bulleDisparue, bulleApparue = bulle_changement(data_by_frame)
     frames = sorted(data_by_frame.keys())  # Liste triée des frames disponibles
 
-    parentsDict = defaultdict(dict) # frame->new_tid-> (parents_id, frame_parents)
+    @dataclass
+    class ParentInfo:
+        parent_id: int
+        frame_parent: int
+
+    parentsDict = defaultdict(lambda: defaultdict(list)) # frame->new_tid-> list de ParentInfo
+
     for frame in frames:
         # Vérifier s'il y a des nouvelles bulles sur cette frame
         if frame not in bulleApparue or not bulleApparue[frame]:
             continue
             
-        print(f"Frame {frame}:\n\t{len(bulleApparue[frame])} new bubbles: {bulleApparue[frame]}")
-        print(f"\tBubbles disappear btw frame {frame-N_FRAMES_PREVIOUS_DISAPPEAR} and {frame+N_FRAMES_POST_DISAPPEAR}:")
+        outputFile.write(f"Frame {frame}:\n\t{len(bulleApparue[frame])} new bubbles: {bulleApparue[frame]}\n")
+        outputFile.write(f"\tBubbles disappear btw frame {frame-N_FRAMES_PREVIOUS_DISAPPEAR} and {frame+N_FRAMES_POST_DISAPPEAR}:\n")
         
         for new_tid in bulleApparue[frame]:
             if new_tid not in data_by_frame[frame]:
@@ -245,14 +243,11 @@ def my_detect_fusion(json_path, csv_path, image_shape=IMAGE_SHAPE, score_thresh=
                     new_tid in data_by_frame[i_frame]): 
 
                     child_mask = child_mask + data_by_frame[i_frame][new_tid]
-
-
-            parentsDict[frame][new_tid] = []
             
             # Chercher les parents dans les frames autour (frame-1, frame, frame+1)
             for search_frame in range(frame-N_FRAMES_PREVIOUS_DISAPPEAR, frame+1+N_FRAMES_POST_DISAPPEAR):
                 if search_frame in bulleDisparue and bulleDisparue[search_frame]:
-                    print(f"\t\tFrame {search_frame}: {bulleDisparue[search_frame]}")
+                    outputFile.write(f"\t\tFrame {search_frame}: {bulleDisparue[search_frame]}\n")
                     for dis_tid in bulleDisparue[search_frame]:
                         # Vérifier que le parent existe dans les données
                         if dis_tid == new_tid: # un parent ne peut pas etre son propre fils
@@ -267,12 +262,14 @@ def my_detect_fusion(json_path, csv_path, image_shape=IMAGE_SHAPE, score_thresh=
                             ratio = overlap_ratio(parent_mask, child_mask)
                             
                             if ratio > OVERLAP_THRESH:
-                                parentsDict[frame][new_tid].append((dis_tid, search_frame-1))
-                                print(f"\t\t\tParent trouvé: {dis_tid} (frame {search_frame}) -> {new_tid}, ratio: {ratio:.3f}")
-    
+                                parentsDict[frame][new_tid].append(ParentInfo(parent_id=dis_tid, frame_parent=search_frame-1))
+                                outputFile.write(f"\t\t\tFound parent: {dis_tid} (frame {search_frame}) -> {new_tid}, ratio: {ratio:.3f}\n")
+
+
     # NETTOYAGE : retirer les entrées vides et celles avec moins de 2 parents
     parentsDict_clean = {}
     parentsDict_clean2 = defaultdict(dict)
+
     for frame, tracks in parentsDict.items():
         # Filtrer pour garder seulement les tracks avec au moins 2 parents
         tracks_with_min_2_parents = {
@@ -280,36 +277,67 @@ def my_detect_fusion(json_path, csv_path, image_shape=IMAGE_SHAPE, score_thresh=
             for track_id, parents in tracks.items() 
             if len(parents) >= 2
         }
+        
         # Ne garder la frame que si elle contient au moins une track valide
         if tracks_with_min_2_parents:
             parentsDict_clean[frame] = tracks_with_min_2_parents
 
-            # for new_tid, (parents_id, frame_parents) in parentsDict_clean[frame].items():
-            #     parentsDict_clean2[frame][new_tid] = filtrer_parents_par_iou(list(parents_id), list(frame_parents), data_by_frame, seuil_iou=0.7)
-    
+            # Retirer les parents s'ils sont trop proche l'un de l'autre (par IOU)
+            for new_tid, parents_list in parentsDict_clean[frame].items():
+                parents_ids = [info.parent_id for info in parents_list]
+                frames_parents = [info.frame_parent for info in parents_list]
+                
+                # Appliquer le filtrage IOU
+                parents_filtres = filtrer_parents_par_iou(
+                    list(parents_ids), 
+                    list(frames_parents), 
+                    data_by_frame, 
+                    seuil_iou=seuil_iou
+                )
+                
+                # Ne garder que si on a au moins 2 parents après filtrage
+                if len(parents_filtres) >= 2:
+                    parentsDict_clean2[frame][new_tid] = parents_filtres
+
+    # Nettoyage final : retirer les frames vides dans parentsDict_clean2
+    parentsDict_clean2 = {
+        frame: tracks 
+        for frame, tracks in parentsDict_clean2.items() 
+        if tracks  # Garde seulement les frames avec au moins une track
+    }
+
     print("\nRésultats des fusions détectées:")
-    for frame, tracks in parentsDict_clean.items():
-        for new_tid, parents_tuple in tracks.items():
-            print(f"Frame {frame:3d}: {new_tid:3d} <- {parents_tuple}")
-            # print(f"Frame {frame:3d}: {new_tid:3d} ← [", end="")
-            # for id, _ in parents_tuple:
-            #     print(id, end="," )
-            # print("]")
+    outputFile.write("##########################################################\nResults:\n")
+    for frame, tracks in parentsDict_clean2.items():
+        for new_tid, parents in tracks.items():
+            print(f"Frame {frame:3d}: {new_tid:3d} <- {parents}")
+            outputFile.write(f"\tFrame {frame:3d}: {new_tid:3d} <- {parents}\n")
+
     
-    return parentsDict_clean
+    return parentsDict_clean2
 
 def exportData(parentsDict, outputFile):
     with open(outputFile, 'w') as file:
         file.write(f"{len(parentsDict)} fusions detect:\n")
         for frame, tracks in parentsDict.items():
-            for new_tid, parents_tuple in tracks.items():
-                file.write(f"Frame {frame:3d}: {new_tid:3d} <- {parents_tuple}\n") # !!!!! on affiche pas la bonne chose
+            for new_tid, parents in tracks.items():
+                file.write(f"Frame {frame:3d}: {new_tid:3d} <- {parents}\n") 
 
 # ------------------------
 # EXÉCUTION
 # ------------------------
 
-
 # Lance la détection des fusions
-parentsDict = my_detect_fusion(contourFile, richFile, IMAGE_SHAPE, score_thres)
-exportData(parentsDict, outputFilePath)
+with open(outputFileHistoryPath, 'w') as f:
+# write the used parameters
+    f.write("PARAMETERS:\n")
+    f.write(f"\tDILATE_ITERS = {DILATE_ITERS}\n")
+    f.write(f"\tOVERLAP_THRESH = {OVERLAP_THRESH}\n")
+    f.write(f"\tPOST_FUSION_FRAMES = {POST_FUSION_FRAMES}\n")
+    f.write(f"\tN_FRAMES_PREVIOUS_DISAPPEAR = {N_FRAMES_PREVIOUS_DISAPPEAR}\n")
+    f.write(f"\tN_FRAMES_POST_DISAPPEAR = {N_FRAMES_POST_DISAPPEAR}\n")
+    f.write(f"\tscore_thres = {score_thres}\n")
+    f.write(f"\tMAX_IOU_PARENTS = {MAX_IOU_PARENTS}\n")
+    f.write("\n##########################################################\n")
+    parentsDict = my_detect_fusion(contourFile, richFile, f, IMAGE_SHAPE, score_thres, MAX_IOU_PARENTS)
+exportData(parentsDict, outputFileResultPath)
