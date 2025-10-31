@@ -26,12 +26,12 @@ N_FRAMES_PREVIOUS_DISAPPEAR = 3
 N_FRAMES_POST_DISAPPEAR = 2
 
 score_thres = 0.7 #Minimum prediction score to have to consider a bubble
-MAX_IOU_PARENTS = 0.7 #maximum intersection over union between two parents
+MAX_OVERLAP_PARENTS = 0.7 #maximum intersection over union between two parents
 
 # -----------------------------DATA------------------------------------
 # Dossier ou sont sauvegarde les donnee apres le modele
 dataFolder = r"C:\Users\faraboli\Desktop\BubbleID\BubbleIDGit\ProjetBubbleID\My_output\SaveData3"
-extension = "T113_2_60V_2"
+extension = "T113_2_100V_1"
 
 contourFile = dataFolder + "/contours_" + extension +".json"  # Fichier des contours
 richFile = dataFolder + "/rich_" + extension +".csv"  # Fichier de tracking
@@ -331,7 +331,7 @@ with open(outputFileHistoryPath, 'w') as f:
     f.write(f"\tN_FRAMES_PREVIOUS_DISAPPEAR = {N_FRAMES_PREVIOUS_DISAPPEAR}\n")
     f.write(f"\tN_FRAMES_POST_DISAPPEAR = {N_FRAMES_POST_DISAPPEAR}\n")
     f.write(f"\tscore_thres = {score_thres}\n")
-    f.write(f"\tMAX_IOU_PARENTS = {MAX_IOU_PARENTS}\n")
+    f.write(f"\tMAX_OVERLAP_PARENTS = {MAX_OVERLAP_PARENTS}\n")
     f.write("\n##########################################################\n")
-    parentsDict = my_detect_fusion(contourFile, richFile, f, IMAGE_SHAPE, score_thres, MAX_IOU_PARENTS)
+    parentsDict = my_detect_fusion(contourFile, richFile, f, IMAGE_SHAPE, score_thres, MAX_OVERLAP_PARENTS)
 exportData(parentsDict, outputFileResultPath)
