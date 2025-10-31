@@ -147,6 +147,72 @@ def bulle_changement(data_by_frame):
     return bulleDisparue, bulleApparue
 
 
+def filtrer_parents_par_iou(parents_ids, frame_parents, masques_dict, seuil_iou=0.7):
+    """
+    Calcule les intersections deux à deux et retire les parents avec trop de chevauchement
+    """
+    masques_parents = []
+    donnees_valides = []
+    
+    # Récupérer les masques valides
+    for parent_id, frame_parent in zip(parents_ids, frame_parents):
+        if frame_parent in masques_dict and parent_id in masques_dict[frame_parent]:
+            masque = masques_dict[frame_parent][parent_id]
+            masques_parents.append(masque)
+            donnees_valides.append((parent_id, frame_parent))
+    
+    if len(masques_parents) < 2:
+        return donnees_valides, masques_parents
+    
+    # Matrice d'IOU entre toutes les paires
+    n = len(masques_parents)
+    iou_matrix = np.zeros((n, n))
+    
+    for i in range(n):
+        for j in range(i + 1, n):
+            iou = _calculer_iou_masques(masques_parents[i], masques_parents[j])
+            iou_matrix[i, j] = iou
+            iou_matrix[j, i] = iou
+    
+    # Identifier les parents à retirer (IOU trop élevé)
+    a_retirer = set()
+    
+    for i in range(n):
+        for j in range(i + 1, n):
+            if iou_matrix[i, j] > seuil_iou:
+                # Retirer celui qui a la plus petite surface
+                surface_i = np.sum(masques_parents[i]) // 255
+                surface_j = np.sum(masques_parents[j]) // 255
+                
+                if surface_i < surface_j:
+                    a_retirer.add(i)
+                else:
+                    a_retirer.add(j)
+    
+    # Filtrer les listes
+    parents_filtres = []
+    masques_filtres = []
+    
+    for idx, (donnees, masque) in enumerate(zip(donnees_valides, masques_parents)):
+        if idx not in a_retirer:
+            parents_filtres.append(donnees)
+            masques_filtres.append(masque)
+    
+    return parents_filtres, masques_filtres
+
+def _calculer_iou_masques(masque1, masque2):
+    """Calcule l'IOU entre deux masques binaires"""
+    intersection = np.logical_and(masque1, masque2)
+    union = np.logical_or(masque1, masque2)
+    
+    surface_intersection = np.sum(intersection)
+    surface_union = np.sum(union)
+    
+    if surface_union == 0:
+        return 0.0
+    
+    return surface_intersection / surface_union
+
 def my_detect_fusion(json_path, csv_path, image_shape=IMAGE_SHAPE, score_thresh=.7):
     """Détecte les fusions de bulles en analysant les chevauchements temporels
     Retourne: dict {new_track_id: {'parents': [parent_ids], 'frame': frame}}
@@ -206,6 +272,7 @@ def my_detect_fusion(json_path, csv_path, image_shape=IMAGE_SHAPE, score_thresh=
     
     # NETTOYAGE : retirer les entrées vides et celles avec moins de 2 parents
     parentsDict_clean = {}
+    parentsDict_clean2 = defaultdict(dict)
     for frame, tracks in parentsDict.items():
         # Filtrer pour garder seulement les tracks avec au moins 2 parents
         tracks_with_min_2_parents = {
@@ -217,8 +284,8 @@ def my_detect_fusion(json_path, csv_path, image_shape=IMAGE_SHAPE, score_thresh=
         if tracks_with_min_2_parents:
             parentsDict_clean[frame] = tracks_with_min_2_parents
 
-            if mask_area(np.logical_and(data_by_frame[parentsDict_clean[frame][1]][parentsDict_clean[frame][0]])):
-                pass
+            # for new_tid, (parents_id, frame_parents) in parentsDict_clean[frame].items():
+            #     parentsDict_clean2[frame][new_tid] = filtrer_parents_par_iou(list(parents_id), list(frame_parents), data_by_frame, seuil_iou=0.7)
     
     print("\nRésultats des fusions détectées:")
     for frame, tracks in parentsDict_clean.items():
