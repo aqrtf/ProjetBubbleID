@@ -26,7 +26,7 @@ N_FRAMES_PREVIOUS_DISAPPEAR = 3
 N_FRAMES_POST_DISAPPEAR = 2
 
 score_thres = 0.7 #Minimum prediction score to have to consider a bubble
-MAX_OVERLAP_PARENTS = 0.7 #maximum intersection over union between two parents
+MIN_OVERLAP_SAME = 0.85 #minimum overlap to consider two bubbles equal
 
 # -----------------------------DATA------------------------------------
 # Dossier ou sont sauvegarde les donnee apres le modele
@@ -263,7 +263,7 @@ def my_detect_fusion(json_path, csv_path, outputFile, image_shape=IMAGE_SHAPE, s
     outputFile.write(f"Results before cleaning: {len(parentsDict)} fusions detect:\n")
     for frame, tracks in parentsDict.items():
         for new_tid, parents in tracks.items():
-            outputFile.write(f"\tFrame {frame:3d}: {new_tid:3d} <- {[info.frame_parent for info in parents]}\n")
+            outputFile.write(f"\tFrame {frame:3d}: {new_tid:3d} <- {[info.parent_id for info in parents]}\n")
 
 
     # NETTOYAGE : retirer les entrées vides et celles avec moins de 2 parents
@@ -315,6 +315,20 @@ def my_detect_fusion(json_path, csv_path, outputFile, image_shape=IMAGE_SHAPE, s
             print(f"Frame {frame:3d}: {new_tid:3d} <- {parents}")
             outputFile.write(f"\tFrame {frame:3d}: {new_tid:3d} <- {parents}\n")
 
+
+    print("Résultats des chgmt de tracks:")
+    outputFile.write("##########################################################\n")
+    outputFile.write(f"Track ID changes:\n")
+    ## Detection des changement de track_id sans fusion, juste par erreur de tracking
+    for frame in parentsDict:
+        for new_tid in parentsDict[frame]:
+            if len(parentsDict[frame][new_tid]) == 1:
+                precursor = parentsDict[frame][new_tid][0]
+                if overlap_ratio((data_by_frame[frame][new_tid]), (data_by_frame[precursor.frame_parent][precursor.parent_id]), reference="biggest")>MIN_OVERLAP_SAME:
+                    print(f"Frame {frame:3d}: {new_tid:3d} <- {precursor.parent_id}")
+                    outputFile.write(f"\tFrame {frame:3d}: {new_tid:3d} <- {precursor.parent_id}\n")
+
+
     
     return parentsDict_clean2
 
@@ -339,7 +353,7 @@ with open(outputFileHistoryPath, 'w') as f:
     f.write(f"\tN_FRAMES_PREVIOUS_DISAPPEAR = {N_FRAMES_PREVIOUS_DISAPPEAR}\n")
     f.write(f"\tN_FRAMES_POST_DISAPPEAR = {N_FRAMES_POST_DISAPPEAR}\n")
     f.write(f"\tscore_thres = {score_thres}\n")
-    f.write(f"\tMAX_OVERLAP_PARENTS = {MAX_OVERLAP_PARENTS}\n")
+    f.write(f"\tMIN_OVERLAP_SAME = {MIN_OVERLAP_SAME}\n")
     f.write("\n##########################################################\n")
-    parentsDict = my_detect_fusion(contourFile, richFile, f, IMAGE_SHAPE, score_thres, MAX_OVERLAP_PARENTS)
+    parentsDict = my_detect_fusion(contourFile, richFile, f, IMAGE_SHAPE, score_thres, MIN_OVERLAP_SAME)
 exportData(parentsDict, outputFileResultPath)
