@@ -586,8 +586,8 @@ def findMerge(dataFolder, extension, score_thres=0.7, OVERLAP_THRESH=0.1,
     
     contourFile = dataFolder + "/contours_" + extension +".json"  # Fichier des contours
     richFile = dataFolder + "/rich_" + extension +".csv"  # Fichier de tracking
-    outputFileHistoryPath = dataFolder + "/fusionHistory_" + extension + ".txt"
-    outputFileResultPath = dataFolder + "/fusionResult_" + extension + ".txt"
+    outputFileHistoryPath = dataFolder + "fusionHistory_" + extension + ".txt"
+    outputFileResultPath = dataFolder + "fusionResult_" + extension + ".txt"
     
     # Lance la détection des fusions
     with open(outputFileHistoryPath, 'w') as f:
@@ -645,7 +645,7 @@ def findMerge(dataFolder, extension, score_thres=0.7, OVERLAP_THRESH=0.1,
 
 ######################################################################################################
 
-# dataFolder = "My_output/Test6"
+# dataFolder = "My_output/Test6/"
 # extension = "Test6"
 # findMerge(dataFolder, extension, score_thres=0.7, OVERLAP_THRESH=0.1,
 #                                     MIN_OVERLAP_SAME=0.7, POST_FUSION_FRAMES=2, N_FRAMES_PREVIOUS_DISAPPEAR=3, 
