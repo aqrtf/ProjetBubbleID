@@ -592,7 +592,7 @@ def findMerge(dataFolder, extension, score_thres=0.7, OVERLAP_THRESH=0.1,
     # Lance la détection des fusions
     with open(outputFileHistoryPath, 'w') as f:
         # Écriture des paramètres utilisés
-        f.write("PARAMÈTRES UTILISÉS:\n")
+        f.write("PARAMETERS:\n")
         f.write(f"\tIMAGE_SHAPE = {IMAGE_SHAPE}\n")
         f.write(f"\tDILATE_ITERS = {DILATE_ITERS}\n")
         f.write(f"\tOVERLAP_THRESH = {OVERLAP_THRESH}\n")
@@ -601,7 +601,7 @@ def findMerge(dataFolder, extension, score_thres=0.7, OVERLAP_THRESH=0.1,
         f.write(f"\tN_FRAMES_POST_DISAPPEAR = {N_FRAMES_POST_DISAPPEAR}\n")
         f.write(f"\tscore_thres = {score_thres}\n")
         f.write(f"\tMIN_OVERLAP_SAME = {MIN_OVERLAP_SAME}\n")
-        f.write("\n" + "="*60 + "\n")
+        f.write("="*60 + "\n")
         
         fusionDict = my_detect_fusion(contourFile,
                                       richFile,
@@ -624,18 +624,31 @@ def findMerge(dataFolder, extension, score_thres=0.7, OVERLAP_THRESH=0.1,
                                         image_shape=IMAGE_SHAPE,
                                         dilate_iters=DILATE_ITERS)
 
-    
+    # Si x->y puis y->x il ne faut pas garder le deuxieme puisque on veut changer tous les y en x dans le reste
+    changeIDList_clean = []
+    for idx in range(len(changeIDList)):
+        if changeIDList[idx][1] == changeIDList[idx][2]: #old and new equal
+            continue
+        changeIDList_clean.append(changeIDList[idx])
+        for j in range(idx+1, len(changeIDList)):
+            if changeIDList[j][1] == changeIDList[idx][1]:
+                changeIDList[j][1] = changeIDList[idx][2]
+            if changeIDList[j][2] == changeIDList[idx][1]:
+                changeIDList[j][2] = changeIDList[idx][2]
+            
+    #TODO il faut faire pareil pour les merges
+      
     # Export des résultats finaux
     exportData(fusionDict, outputFileResultPath)
     
-    return fusionDict, changeIDList
+    return fusionDict, changeIDList_clean
 
 ######################################################################################################
 
-dataFolder = "My_output/Test6"
-extension = "Test6"
-findMerge(dataFolder, extension, score_thres=0.7, OVERLAP_THRESH=0.1,
-                                    MIN_OVERLAP_SAME=0.7, POST_FUSION_FRAMES=2, N_FRAMES_PREVIOUS_DISAPPEAR=3, 
-                                    N_FRAMES_POST_DISAPPEAR=2,
-                                    IMAGE_SHAPE=(1024, 1024), DILATE_ITERS=1
-                                    )
+# dataFolder = "My_output/Test6"
+# extension = "Test6"
+# findMerge(dataFolder, extension, score_thres=0.7, OVERLAP_THRESH=0.1,
+#                                     MIN_OVERLAP_SAME=0.7, POST_FUSION_FRAMES=2, N_FRAMES_PREVIOUS_DISAPPEAR=3, 
+#                                     N_FRAMES_POST_DISAPPEAR=2,
+#                                     IMAGE_SHAPE=(1024, 1024), DILATE_ITERS=1
+#                                     )

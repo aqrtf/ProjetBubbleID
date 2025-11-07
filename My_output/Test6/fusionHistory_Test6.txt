@@ -1,0 +1,104 @@
+PARAMETERS:
+	IMAGE_SHAPE = (1024, 1024)
+	DILATE_ITERS = 1
+	OVERLAP_THRESH = 0.1
+	POST_FUSION_FRAMES = 2
+	N_FRAMES_PREVIOUS_DISAPPEAR = 3
+	N_FRAMES_POST_DISAPPEAR = 2
+	score_thres = 0.7
+	MIN_OVERLAP_SAME = 0.7
+============================================================
+Frame 3:
+	2 new bubbles: [16, 17]
+	Bubbles disappear btw frame 0 and 5:
+		Frame 2: [11, 12]
+		Frame 4: [5]
+		Frame 5: [12]
+		Frame 2: [11, 12]
+		Frame 4: [5]
+		Frame 5: [12]
+Frame 4:
+	3 new bubbles: [18, 11, 12]
+	Bubbles disappear btw frame 1 and 6:
+		Frame 2: [11, 12]
+		Frame 4: [5]
+		Frame 5: [12]
+		Frame 6: [18]
+		Frame 2: [11, 12]
+		Frame 4: [5]
+		Frame 5: [12]
+		Frame 6: [18]
+		Frame 2: [11, 12]
+		Frame 4: [5]
+		Frame 5: [12]
+		Frame 6: [18]
+Frame 8:
+	1 new bubbles: [20]
+	Bubbles disappear btw frame 5 and 10:
+		Frame 5: [12]
+		Frame 6: [18]
+		Frame 8: [9, 6]
+			Found parent: 9 (frame 8) -> 20, ratio: 0.234
+			Found parent: 6 (frame 8) -> 20, ratio: 0.701
+		Frame 9: [17]
+Frame 11:
+	1 new bubbles: [6]
+	Bubbles disappear btw frame 8 and 13:
+		Frame 8: [9, 6]
+			Found parent: 9 (frame 8) -> 6, ratio: 0.191
+		Frame 9: [17]
+		Frame 11: [20]
+			Found parent: 20 (frame 11) -> 6, ratio: 0.952
+		Frame 12: [16, 6]
+Frame 12:
+	1 new bubbles: [20]
+	Bubbles disappear btw frame 9 and 14:
+		Frame 9: [17]
+		Frame 11: [20]
+		Frame 12: [16, 6]
+			Found parent: 6 (frame 12) -> 20, ratio: 0.890
+		Frame 14: [20]
+Frame 14:
+	1 new bubbles: [6]
+	Bubbles disappear btw frame 11 and 16:
+		Frame 11: [20]
+			Found parent: 20 (frame 11) -> 6, ratio: 0.840
+		Frame 12: [16, 6]
+		Frame 14: [20]
+			Found parent: 20 (frame 14) -> 6, ratio: 0.938
+Frame 15:
+	1 new bubbles: [23]
+	Bubbles disappear btw frame 12 and 17:
+		Frame 12: [16, 6]
+		Frame 14: [20]
+##########################################################
+Results before cleaning: 4 fusions detect:
+	Frame   8:  20 <- [9, 6]
+	Frame  11:   6 <- [9, 20]
+	Frame  12:  20 <- [6]
+	Frame  14:   6 <- [20, 20]
+##########################################################
+Cleaning:
+##########################################################
+Results: 1 fusions detect:
+	Frame   8:  20 <- [9, 6]
+
+##########################################################
+TRACK ID CHANGEMENTS
+##########################################################
+Results before cleaning: 4 potential changes detected:
+	Frame   8:  20 <- [6]
+	Frame  11:   6 <- [20]
+	Frame  12:  20 <- [6]
+	Frame  14:   6 <- [20, 20]
+----CLEANING----
+Step 1: Removing duplicate parents (keeping latest frame):
+	Frame 14: 6 - removed duplicates, kept 1 parents from 2
+Step 2: Checking for multiple different parents (should be merges):
+Step 3: Excluding cases where fusion was detected:
+	Frame 8: 20 comes from a merge
+##########################################################
+Final results: 3 track changes detected:
+	Frame  11:   6 <- 20 (from frame 10)
+	Frame  12:  20 <- 6 (from frame 11)
+	Frame  14:   6 <- 20 (from frame 13)
