@@ -8,48 +8,19 @@ import cv2
 from collections import defaultdict
 from dataclasses import dataclass
 
-# --------------------------PARAMÈTRES------------------------
-IMAGE_SHAPE = (1024, 1024)  # Dimensions des images (hauteur, largeur)
-DILATE_ITERS = 1  # Nombre d'itérations de dilatation pour les masques
-KERNEL = np.ones((3, 3), np.uint8)  # Noyau pour les opérations morphologiques
-OVERLAP_THRESH = 0.1  # Seuil minimum de chevauchement pour considérer une relation parent-enfant
-
-# Pour ameliorer la robustesse on ne prends pas que le mask de la nouvelle bulle 
-# a son apparition mais aussi sur les qq frames suivantes. En effet, le tracking 
-# n'est pas toujours complet
-POST_FUSION_FRAMES = 2  # Frames après fusion pour consolidation du masque
-
-# Les bulles parents ne disparraissent pas toujours juste au moment de la fusion
-# Parfois elles ne sont plus detecte plusieurs frames avant
-N_FRAMES_PREVIOUS_DISAPPEAR = 3
-# Et parfois elle restent detectees sur une ou deux frame avec le child
-N_FRAMES_POST_DISAPPEAR = 2
-
-score_thres = 0.7 #Minimum prediction score to have to consider a bubble
-MIN_OVERLAP_SAME = 0.7 #maximum intersection over union between two parents
-
-# -----------------------------DATA------------------------------------
-# Dossier ou sont sauvegarde les donnee apres le modele
-dataFolder = "My_output/Test6"
-extension = "Test6"
-
-contourFile = dataFolder + "/contours_" + extension +".json"  # Fichier des contours
-richFile = dataFolder + "/rich_" + extension +".csv"  # Fichier de tracking
-outputFileHistoryPath = dataFolder + "/fusionHistory_" + extension + ".txt"
-outputFileResultPath = dataFolder + "/fusionResult_" + extension + ".txt"
-
 # ------------------------
 # UTILITAIRES
 # ------------------------
-def mask_from_contour(contour, shape):
+def mask_from_contour(contour, shape, dilate_iters):
     """Convertit un contour en masque binaire"""
+    KERNEL=np.ones((3, 3), np.uint8)
     mask = np.zeros(shape, dtype=np.uint8)  # Crée un masque vide
     if len(contour) == 0:  # Si le contour est vide, retourne un masque vide
         return mask
     pts = np.array(contour, dtype=np.int32)  # Convertit les points en array numpy
     cv2.fillPoly(mask, [pts], 255)  # Remplit le polygone défini par le contour
-    if DILATE_ITERS > 0:  # Applique une dilatation si demandée
-        mask = cv2.dilate(mask, KERNEL, iterations=DILATE_ITERS)
+    if dilate_iters > 0:  # Applique une dilatation si demandée
+        mask = cv2.dilate(mask, KERNEL, iterations=dilate_iters)
     return mask
 
 def mask_area(mask):
@@ -89,7 +60,7 @@ def load_json_contours(json_path):
     
     return parsed
 
-def build_masks_and_index(json_path, csv_path, image_shape=IMAGE_SHAPE, score_thres=0.7):
+def build_masks_and_index(json_path, csv_path, image_shape, score_thres, dilate_iters):
     """
     Construit un index des masques binaires organisé par frame et track_id.
     
@@ -122,7 +93,7 @@ def build_masks_and_index(json_path, csv_path, image_shape=IMAGE_SHAPE, score_th
                 continue
 
             track_id = int(row.iloc[0]['track_id'])  # Récupère le track_id
-            mask = mask_from_contour(contour, image_shape)  # Crée le masque
+            mask = mask_from_contour(contour, image_shape, dilate_iters)  # Crée le masque
             if np.sum(mask > 0) == 0:  # Vérifie que le masque n'est pas vide
                 continue
             
@@ -241,7 +212,7 @@ def filtrer_parents_par_intersection(parents_ids, frame_parents, masques_dict, m
     return parents_ids
 
 
-def my_detect_fusion(json_path, csv_path, outputFile, N_FRAMES_PREVIOUS_DISAPPEAR, N_FRAMES_POST_DISAPPEAR, POST_FUSION_FRAMES, OVERLAP_THRESH, score_thresh=.7, min_overlap_same=.7, image_shape=IMAGE_SHAPE):
+def my_detect_fusion(json_path, csv_path, outputFile, N_FRAMES_PREVIOUS_DISAPPEAR, N_FRAMES_POST_DISAPPEAR, POST_FUSION_FRAMES, OVERLAP_THRESH, score_thresh=.7, min_overlap_same=.7, image_shape=(1024,1024), dilate_iters=0):
     """
     Détecte les fusions de bulles en analysant les chevauchements temporels entre frames.
     
@@ -266,7 +237,7 @@ def my_detect_fusion(json_path, csv_path, outputFile, N_FRAMES_PREVIOUS_DISAPPEA
         dict: {frame: {new_track_id: [parent_ids]}} Dictionnaire des fusions détectées
     """
     # Construit l'index des masques par frame
-    data_by_frame = build_masks_and_index(json_path, csv_path, image_shape, score_thresh)
+    data_by_frame = build_masks_and_index(json_path, csv_path, image_shape, score_thresh, dilate_iters)
     bulleDisparue, bulleApparue = bulle_changement(data_by_frame)
     frames = sorted(data_by_frame.keys())  # Liste triée des frames disponibles
 
@@ -381,7 +352,7 @@ def my_detect_fusion(json_path, csv_path, outputFile, N_FRAMES_PREVIOUS_DISAPPEA
     return parentsDict_clean2
 
 
-def track_id_changes(json_path, csv_path, outputFile, N_FRAMES_PREVIOUS_DISAPPEAR, score_thresh, MIN_OVERLAP_SAME, existing_fusions=None, image_shape=IMAGE_SHAPE):
+def track_id_changes(json_path, csv_path, outputFile, N_FRAMES_PREVIOUS_DISAPPEAR, score_thresh, MIN_OVERLAP_SAME, existing_fusions=None, image_shape=(1024,1024), dilate_iters=0):
     """
     Détecte les changements simples de track_id où une bulle conserve sa position mais change d'identifiant.
     
@@ -400,14 +371,14 @@ def track_id_changes(json_path, csv_path, outputFile, N_FRAMES_PREVIOUS_DISAPPEA
         image_shape (tuple): Dimensions des images pour créer les masques
         
     Returns:
-        dict: {frame: {new_track_id: [parent_info]}} Dictionnaire des changements de track_id détectés
+        list (nx3): Chaque ligne contient [frame, new_tid, parent_tid] 
         
     Note:
         Contrairement aux fusions, seules les frames antérieures sont considérées pour les parents
         et un seul parent est autorisé par changement de track_id.
     """
     # Construit l'index des masques par frame
-    data_by_frame = build_masks_and_index(json_path, csv_path, image_shape, score_thresh)
+    data_by_frame = build_masks_and_index(json_path, csv_path, image_shape, score_thresh, dilate_iters)
     bulleDisparue, bulleApparue = bulle_changement(data_by_frame)
     frames = sorted(data_by_frame.keys())
 
@@ -534,13 +505,17 @@ def track_id_changes(json_path, csv_path, outputFile, N_FRAMES_PREVIOUS_DISAPPEA
     outputFile.write("##########################################################\n")
     outputFile.write(f"Final results: {len(parentsDict_final)} track changes detected:\n")
     
+    parentsList_return = []
     for frame, tracks in parentsDict_final.items():
         for new_tid, parents in tracks.items():
             parent_info = parents[0]  # Un seul parent puisque filtré
             print(f"Frame {frame:3d}: {new_tid:3d} <- {parent_info.parent_id} (from frame {parent_info.frame_parent})")
             outputFile.write(f"\tFrame {frame:3d}: {new_tid:3d} <- {parent_info.parent_id} (from frame {parent_info.frame_parent})\n")
+            parentsList_return.append([frame, new_tid, parent_info.parent_id])
+            
+    
 
-    return parentsDict_final
+    return parentsList_return
 
 
 def exportData(parentsDict, outputFile):
@@ -553,20 +528,114 @@ def exportData(parentsDict, outputFile):
 # ------------------------
 # EXÉCUTION
 # ------------------------
+# --------------------------PARAMÈTRES------------------------
+# IMAGE_SHAPE = (1024, 1024)  # Dimensions des images (hauteur, largeur)
+# DILATE_ITERS = 1  # Nombre d'itérations de dilatation pour les masques
+# KERNEL = np.ones((3, 3), np.uint8)  # Noyau pour les opérations morphologiques
+# OVERLAP_THRESH = 0.1  # Seuil minimum de chevauchement pour considérer une relation parent-enfant
 
-# Lance la détection des fusions
-with open(outputFileHistoryPath, 'w') as f:
-# write the used parameters
-    f.write("PARAMETERS:\n")
-    f.write(f"\tDILATE_ITERS = {DILATE_ITERS}\n")
-    f.write(f"\tOVERLAP_THRESH = {OVERLAP_THRESH}\n")
-    f.write(f"\tPOST_FUSION_FRAMES = {POST_FUSION_FRAMES}\n")
-    f.write(f"\tN_FRAMES_PREVIOUS_DISAPPEAR = {N_FRAMES_PREVIOUS_DISAPPEAR}\n")
-    f.write(f"\tN_FRAMES_POST_DISAPPEAR = {N_FRAMES_POST_DISAPPEAR}\n")
-    f.write(f"\tscore_thres = {score_thres}\n")
-    f.write(f"\MIN_OVERLAP_SAME = {MIN_OVERLAP_SAME}\n")
-    f.write("\n##########################################################\n")
+# # Pour ameliorer la robustesse on ne prends pas que le mask de la nouvelle bulle 
+# # a son apparition mais aussi sur les qq frames suivantes. En effet, le tracking 
+# # n'est pas toujours complet
+# POST_FUSION_FRAMES = 2  # Frames après fusion pour consolidation du masque
+
+# # Les bulles parents ne disparraissent pas toujours juste au moment de la fusion
+# # Parfois elles ne sont plus detecte plusieurs frames avant
+# N_FRAMES_PREVIOUS_DISAPPEAR = 3
+# # Et parfois elle restent detectees sur une ou deux frame avec le child
+# N_FRAMES_POST_DISAPPEAR = 2
+
+# score_thres = 0.7 #Minimum prediction score to have to consider a bubble
+# MIN_OVERLAP_SAME = 0.7 #minimum overlap btw two bubble to consider equal
+
+# # -----------------------------DATA------------------------------------
+# # Dossier ou sont sauvegarde les donnee apres le modele
+# dataFolder = "My_output/Test6"
+# extension = "Test6"
+
+def findMerge(dataFolder, extension, score_thres=0.7, OVERLAP_THRESH=0.1,
+                                    MIN_OVERLAP_SAME=0.7, POST_FUSION_FRAMES=2, N_FRAMES_PREVIOUS_DISAPPEAR=3, 
+                                    N_FRAMES_POST_DISAPPEAR=2,
+                                    IMAGE_SHAPE=(1024, 1024), DILATE_ITERS=1
+                                    ):
+    """
+    Fonction principale pour détecter les fusions de bulles et les changements de track_id.
     
-    parentsDict = my_detect_fusion(contourFile, richFile, f, N_FRAMES_PREVIOUS_DISAPPEAR, N_FRAMES_POST_DISAPPEAR, POST_FUSION_FRAMES, OVERLAP_THRESH, score_thres, MIN_OVERLAP_SAME, IMAGE_SHAPE)
-    track_id_changes(contourFile, richFile, f, N_FRAMES_PREVIOUS_DISAPPEAR, score_thres, MIN_OVERLAP_SAME, existing_fusions=parentsDict, image_shape=IMAGE_SHAPE)
-exportData(parentsDict, outputFileResultPath)
+    Coordonne l'ensemble du processus de détection en chargeant les données, en appliquant
+    les algorithmes de détection de fusions et de changements d'identité, et en exportant
+    les résultats.
+    
+    Args:
+        dataFolder (str): Chemin vers le dossier ou sont enregistre les rich et contours
+        extension (str): Extension des donnees d'interet
+        score_thres (float): Seuil de score minimum pour considérer une bulle
+        OVERLAP_THRESH (float): Seuil minimum de chevauchement pour les relations parent-enfant
+        MIN_OVERLAP_SAME (float): Seuil d'overlap pour considérer deux bulles comme identiques
+        POST_FUSION_FRAMES (int): Frames après fusion pour consolidation du masque
+        N_FRAMES_PREVIOUS_DISAPPEAR (int): Fenêtre temporelle pour les bulles disparues (frames avant)
+        N_FRAMES_POST_DISAPPEAR (int): Fenêtre temporelle pour les bulles disparues (frames après)
+        IMAGE_SHAPE (tuple): Dimensions des images (hauteur, largeur)
+        DILATE_ITERS (int): Nombre d'itérations de dilatation pour les masques
+        KERNEL (ndarray): Noyau pour les opérations morphologiques    
+        
+    Returns:
+        tuple: (fusionDict, changeIDList) où:
+            - fusionDict (dict): Dictionnaire des fusions détectées
+            - changeIDList (2D list): Liste des chgmt d'id avec par ligne [frame, new_id, old_id]
+    """
+    
+    contourFile = dataFolder + "/contours_" + extension +".json"  # Fichier des contours
+    richFile = dataFolder + "/rich_" + extension +".csv"  # Fichier de tracking
+    outputFileHistoryPath = dataFolder + "/fusionHistory_" + extension + ".txt"
+    outputFileResultPath = dataFolder + "/fusionResult_" + extension + ".txt"
+    
+    # Lance la détection des fusions
+    with open(outputFileHistoryPath, 'w') as f:
+        # Écriture des paramètres utilisés
+        f.write("PARAMÈTRES UTILISÉS:\n")
+        f.write(f"\tIMAGE_SHAPE = {IMAGE_SHAPE}\n")
+        f.write(f"\tDILATE_ITERS = {DILATE_ITERS}\n")
+        f.write(f"\tOVERLAP_THRESH = {OVERLAP_THRESH}\n")
+        f.write(f"\tPOST_FUSION_FRAMES = {POST_FUSION_FRAMES}\n")
+        f.write(f"\tN_FRAMES_PREVIOUS_DISAPPEAR = {N_FRAMES_PREVIOUS_DISAPPEAR}\n")
+        f.write(f"\tN_FRAMES_POST_DISAPPEAR = {N_FRAMES_POST_DISAPPEAR}\n")
+        f.write(f"\tscore_thres = {score_thres}\n")
+        f.write(f"\tMIN_OVERLAP_SAME = {MIN_OVERLAP_SAME}\n")
+        f.write("\n" + "="*60 + "\n")
+        
+        fusionDict = my_detect_fusion(contourFile,
+                                      richFile,
+                                      f,
+                                      N_FRAMES_PREVIOUS_DISAPPEAR,
+                                      N_FRAMES_POST_DISAPPEAR,
+                                      POST_FUSION_FRAMES,
+                                      OVERLAP_THRESH,
+                                      score_thres,
+                                      MIN_OVERLAP_SAME,
+                                      IMAGE_SHAPE,
+                                      dilate_iters=DILATE_ITERS)
+        
+        changeIDList = track_id_changes(contourFile,
+                                        richFile,
+                                        f,
+                                        N_FRAMES_PREVIOUS_DISAPPEAR,
+                                        score_thres, MIN_OVERLAP_SAME,
+                                        existing_fusions=fusionDict,
+                                        image_shape=IMAGE_SHAPE,
+                                        dilate_iters=DILATE_ITERS)
+
+    
+    # Export des résultats finaux
+    exportData(fusionDict, outputFileResultPath)
+    
+    return fusionDict, changeIDList
+
+######################################################################################################
+
+dataFolder = "My_output/Test6"
+extension = "Test6"
+findMerge(dataFolder, extension, score_thres=0.7, OVERLAP_THRESH=0.1,
+                                    MIN_OVERLAP_SAME=0.7, POST_FUSION_FRAMES=2, N_FRAMES_PREVIOUS_DISAPPEAR=3, 
+                                    N_FRAMES_POST_DISAPPEAR=2,
+                                    IMAGE_SHAPE=(1024, 1024), DILATE_ITERS=1
+                                    )
