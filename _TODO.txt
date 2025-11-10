@@ -3,22 +3,11 @@
 - Ne pas considerer la fusion si la bulle parent est encore sur les frames suivante ?? Frame   9:  20 <- [12, 18]
 
 
-Ancien: 
-Résultats des fusions détectées:
-Frame   6:  15 <- [13, 10]
-Frame   9:  20 <- [12, 18]
-Frame  10:  13 <- [10, 15]
-Frame  21:   8 <- [24, 25]
-Frame  24:  19 <- [6, 16]
-Frame  49:  19 <- [16, 30]
-Frame  85:  43 <- [24, 35]
-Frame  88:  24 <- [35, 43]
+05/11
+- Detecter le splitting
+- Quantifier la performance du merging
+- Implementer les fusion / chgmt de track id dans les code de gio
 
-Nouveau
-Frame   6:  15 <- [13, 10]
-Frame   9:  20 <- [12, 18]
-Frame  21:   8 <- [24, 25]
-Frame  24:  19 <- [6, 16]
-Frame  49:  19 <- [16, 30]
-Frame  85:  43 <- [24, 35]
-Frame  88:  24 <- [35, 43]
+- PB pour les grandes bulles, celle ci s'etend au lieu de former une nouvelle bulle: MultiMerge ID30
+- PB Certaine bulles ont pour parents des bulles qui n'existe pas avant
+Pour les chgmt de frame ne se baser que sur les frame disparaissant avant
