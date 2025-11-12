@@ -1618,6 +1618,17 @@ class DataAnalysis:
                       .drop_duplicates(["track_id", "frame0"], keep="first"))
                 df_score = df[["track_id", "frame0", "score"]].copy()
 
+        def _replaceChangedID(rich_df, changeIDList):
+            if "frame" not in rich_df.columns and "frame0" in rich_df.columns:
+                rich_df["frame"] = rich_df["frame0"].astype(int) +1
+                
+            for frame, new_id, old_id in changeIDList:
+                rich_df.loc[(rich_df['frame'] >= frame) & (rich_df['track_id'] == new_id), 'track_id'] = old_id
+            return rich_df
+
+        df_score = _replaceChangedID(df_score, self.changeIDList)
+
+
         # --- FPS ---
         if fps is None:
             fps = 1.0
@@ -2036,6 +2047,19 @@ class DataAnalysis:
 
         print(f"[ComputeDepartureDiameter] salvato: {out_csv}")
         return rows_out
+
+    def findMerge(self, score_thres=0.7, OVERLAP_THRESH=0.1,
+                                    MIN_OVERLAP_SAME=0.7, POST_FUSION_FRAMES=2, N_FRAMES_PREVIOUS_DISAPPEAR=3, 
+                                    N_FRAMES_POST_DISAPPEAR=2,
+                                    IMAGE_SHAPE=(1024, 1024), DILATE_ITERS=1):
+        import parentBubble4
+        self.fusionDict, self.changeIDList = parentBubble4.findMerge(self.savefolder, self.extension, score_thres, OVERLAP_THRESH,
+                                    MIN_OVERLAP_SAME, POST_FUSION_FRAMES, N_FRAMES_PREVIOUS_DISAPPEAR, 
+                                    N_FRAMES_POST_DISAPPEAR,
+                                    IMAGE_SHAPE, DILATE_ITERS
+                                    )
+
+
 
 def TrainSegmentationModel(datapath, ):
     register_coco_instances("my_dataset_train", {}, datapath, "")

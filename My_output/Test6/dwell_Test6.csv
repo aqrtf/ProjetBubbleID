@@ -19,7 +19,7 @@ bubble_id,attach_start_frame,detach_frame,dwell_frames,dwell_seconds,n_frames_tr
 17,,,0,0.0,5,0,nan,no_attached_run
 18,4,,11,0.00275,6,0,64.11843419075012,no_detach_found
 19,,,0,0.0,0,0,nan,no_frames
-20,8,13,5,0.00125,5,0,89.48119084040323,ok
+20,8,13,5,0.00125,5,0,89.61096167564392,ok
 21,,,0,0.0,0,0,nan,no_frames
 22,,,0,0.0,0,0,nan,no_frames
 23,,,0,0.0,1,0,nan,no_attached_run
