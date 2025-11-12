@@ -6,7 +6,6 @@ min_attached_run=2
 savefolder=r"My_output\Test6"   # Define the folder you want the data to save in
 extension="Test6" 
 score_thres = 0.7
-N_FRAMES_POST_DISAPPEAR = 2
 
 from parentBubble4 import findMerge
 fusionDict, changeIDList = findMerge(savefolder, extension, score_thres=0.7, OVERLAP_THRESH=0.1,
@@ -94,7 +93,7 @@ df_filter = (df_filter.sort_values(["track_id", "frame", "score"], ascending=[Tr
 
 df_score = df_filter[["track_id", "frame", "score", "class_id"]].copy()
 
-df_score, fusionDict = _replaceChangedID(df_score, fusionDict, changeIDList)
+# df_score, fusionDict = _replaceChangedID(df_score, fusionDict, changeIDList)
 fusionList = {} # on remplace la structure de fusionDict en fusionList = {frame: [[child, parent1, parent2], ...], ...}
 for frame, tracks in fusionDict.items():
     fusionList[frame] = []
@@ -105,7 +104,6 @@ for frame, tracks in fusionDict.items():
 
 tids = set(df_score["track_id"])
 frames = set(df_score["frame"])
-lastFrame = df_score['frame'].max()
 
 # Parcourir chaque track_id unique
 for track_id in df_score['track_id'].unique():
@@ -118,26 +116,11 @@ for track_id in df_score['track_id'].unique():
     maxjump = max(jump)
     lostframe = np.sum(jump)
     
-    detachedFrame = df_track[df_track['class_id']==DETACHED].frame
-    if detachedFrame.empty: #La bulle ne s'est pas detachee, verifier les merge
-        if df_track["frame"].iloc[-1] == lastFrame:
-            # la bulle reste attachee jusqua la fin
-            pass
-        track_id_child = -1
-        for frameMerge, listMerge in fusionList.items():
-            if frameMerge-N_FRAMES_POST_DISAPPEAR>=df_track["frame"].iloc[-1]:
-                if track_id in listMerge:
-                    track_id_child = listMerge[0]
-                    break
-        
-        if track_id_child == -1: 
-            pass
-            
-    elif detachedFrame[0] == frame_apparition: #la frame est detachee des le debut
+    detachedIdx = np.argwhere(df_track['class_id']==DETACHED)
+    if detachedIdx == None: #La bulle ne s'est pas detachee, verifier les merge
         pass
-                
-                    
-    
+    elif detachedIdx[0] == frame_apparition: #la frame est detachee des le debut
+        pass
     else:
         pass
         
