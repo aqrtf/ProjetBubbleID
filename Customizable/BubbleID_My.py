@@ -189,7 +189,7 @@ class DataAnalysis:
 
 
         # save the video with only the selected frames
-        dst = os.path.join(self.imagesfolder, "..", "trimmed_50.avi")
+        dst = os.path.join(self.imagesfolder, "..", "trimmed_" + self.extension + ".avi")
         # Prendi codec e fps dal video originale
         fps    = cap.get(cv2.CAP_PROP_FPS)
         width  = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
@@ -2052,6 +2052,24 @@ class DataAnalysis:
                                     MIN_OVERLAP_SAME=0.7, POST_FUSION_FRAMES=2, N_FRAMES_PREVIOUS_DISAPPEAR=3, 
                                     N_FRAMES_POST_DISAPPEAR=2,
                                     IMAGE_SHAPE=(1024, 1024), DILATE_ITERS=1):
+        """
+        Fonction principale pour détecter les fusions de bulles et les changements de track_id.
+
+        
+        Args:
+            score_thres (float): Seuil de score minimum pour considérer une bulle
+            OVERLAP_THRESH (float): Seuil minimum de chevauchement pour les relations parent-enfant
+            MIN_OVERLAP_SAME (float): Seuil d'overlap pour considérer deux bulles comme identiques
+            POST_FUSION_FRAMES (int): Frames après fusion pour consolidation du masque
+            N_FRAMES_PREVIOUS_DISAPPEAR (int): Fenêtre temporelle pour les bulles disparues (frames avant)
+            N_FRAMES_POST_DISAPPEAR (int): Fenêtre temporelle pour les bulles disparues (frames après)
+            IMAGE_SHAPE (tuple): Dimensions des images (hauteur, largeur)
+            DILATE_ITERS (int): Nombre d'itérations de dilatation pour les masques
+            
+        Returns:
+                - self.fusionDict (dict): Dictionnaire des fusions détectées
+                - self.changeIDList (2D list): Liste des chgmt d'id avec par ligne [frame, new_id, old_id]
+        """
         import parentBubble4
         self.fusionDict, self.changeIDList = parentBubble4.findMerge(self.savefolder, self.extension, score_thres, OVERLAP_THRESH,
                                     MIN_OVERLAP_SAME, POST_FUSION_FRAMES, N_FRAMES_PREVIOUS_DISAPPEAR, 

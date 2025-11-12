@@ -1,4 +1,4 @@
-# TODO il ne faut pas que l'intersection des parents soit trop importante
+# OLD VERSION
 
 
 import json
@@ -30,8 +30,8 @@ MIN_OVERLAP_SAME = 0.85 #minimum overlap to consider two bubbles equal
 
 # -----------------------------DATA------------------------------------
 # Dossier ou sont sauvegarde les donnee apres le modele
-dataFolder = r"C:\Users\faraboli\Desktop\BubbleID\BubbleIDGit\ProjetBubbleID\My_output\SaveData3"
-extension = "T113_2_60V_2"
+dataFolder = r"C:\Users\faraboli\Desktop\BubbleID\BubbleIDGit\ProjetBubbleID\My_output\Test6"
+extension = "Test6"
 
 contourFile = dataFolder + "/contours_" + extension +".json"  # Fichier des contours
 richFile = dataFolder + "/rich_" + extension +".csv"  # Fichier de tracking

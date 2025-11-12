@@ -576,7 +576,6 @@ def findMerge(dataFolder, extension, score_thres=0.7, OVERLAP_THRESH=0.1,
         N_FRAMES_POST_DISAPPEAR (int): Fenêtre temporelle pour les bulles disparues (frames après)
         IMAGE_SHAPE (tuple): Dimensions des images (hauteur, largeur)
         DILATE_ITERS (int): Nombre d'itérations de dilatation pour les masques
-        KERNEL (ndarray): Noyau pour les opérations morphologiques    
         
     Returns:
         tuple: (fusionDict, changeIDList) où:
