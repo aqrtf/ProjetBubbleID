@@ -32,10 +32,22 @@ df_filter = (df_filter.sort_values(["track_id", "frame", "score"], ascending=[Tr
 df_score = df_filter[["track_id", "frame", "score", "class_id"]].copy()
 
 
-def _replaceChangedID(rich_df, changeIDList):
-    if "frame" not in rich_df.columns and "frame0" in rich_df.columns:
-        rich_df["frame"] = rich_df["frame0"].astype(int) +1
-        
+tids = set(df_score["track_id"])
+frames = set(df_score["frame"])
+for tid in tids:
+    firstAppearFrame = -1
+    for frame in frames:
+        existe = ((df_score['track_id'] == tid) & (df_score['frame'] == frame)).any()
+        if existe:
+            if firstAppearFrame<0:
+                firstAppearFrame = frame
+            else: #on a deja vu   
+
+
+
+
+
+def _replaceChangedID(rich_df, changeIDList):        
     for frame, new_id, old_id in changeIDList:
         rich_df.loc[(rich_df['frame'] >= frame) & (rich_df['track_id'] == new_id), 'track_id'] = old_id
     return rich_df
