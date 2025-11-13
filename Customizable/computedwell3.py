@@ -2,7 +2,7 @@ import os, csv, cv2, numpy as np
 import pandas as pd
 from csteDef import *
 
-min_attached_run=2
+min_attached_run=0
 savefolder=r"My_output\Test6"   # Define the folder you want the data to save in
 extension="Test6" 
 score_thres = 0.7
@@ -75,7 +75,7 @@ def _replaceChangedID(rich_df, fusionDict, changeIDList):
     # Retourner le dictionnaire complet avec toutes les corrections appliquées
     return rich_df, fusion_corrige
 
-def _smooth_track(frames, classes, tolerate_unknown_gap=1, class_idx_attached=2, class_idx_unknown=1):
+def _smooth_track(frames, classes, tolerate_unknown_gap=1):
     """
     Lisse la séquence de classes en comblant les petits gaps d'unknown
     """
@@ -93,18 +93,18 @@ def _smooth_track(frames, classes, tolerate_unknown_gap=1, class_idx_attached=2,
         i = 0
         n = len(out_classes)
         while i < n:
-            if out_classes[i] == class_idx_attached:
+            if out_classes[i] == ATTACHED:
                 j = i + 1
                 unk_count = 0
                 # Compter les unknown consécutifs
-                while j < n and out_classes[j] == class_idx_unknown:
+                while j < n and out_classes[j] == UNKNOWN:
                     unk_count += 1
                     j += 1
                 # Si le gap d'unknown est acceptable et qu'après c'est attached
-                if 0 < unk_count <= tolerate_unknown_gap and j < n and out_classes[j] == class_idx_attached:
+                if 0 < unk_count <= tolerate_unknown_gap and j < n and out_classes[j] == ATTACHED:
                     # Combler le gap
                     for k in range(i + 1, j):
-                        out_classes[k] = class_idx_attached
+                        out_classes[k] = ATTACHED
                     i = j
                     continue
             i += 1
@@ -112,8 +112,7 @@ def _smooth_track(frames, classes, tolerate_unknown_gap=1, class_idx_attached=2,
     return fr_sorted, out_classes
 
 def find_attachment_period(track_data, fusionList, last_frame, 
-                          class_idx_attached=2, class_idx_detached=0, 
-                          min_attached_run=2, tolerate_unknown_gap=1):
+                          min_attached_run=0, tolerate_unknown_gap=1):
     """
     Trouve la période d'attachement pour une bulle
     """
@@ -157,7 +156,8 @@ def find_attachment_period(track_data, fusionList, last_frame,
             'attach_start': None,
             'detach_frame': None,
             'dwell_frames': 0,
-            'note': 'no_attached_run'
+            'note': 'no_attached_run',
+            'note2': None
         }
     
     # Trouver le frame de détachement
@@ -167,6 +167,7 @@ def find_attachment_period(track_data, fusionList, last_frame,
             detach_frame = fr_smoothed[j]
             break
     
+    child = None
     # Vérifier les fusions si pas de détachement trouvé
     if detach_frame is None:
         # Vérifier si la bulle a fusionné avec une autre
@@ -174,11 +175,12 @@ def find_attachment_period(track_data, fusionList, last_frame,
         merged = False
         
         for frame_fusion, mergers in fusionList.items():
-            if frame_fusion >= last_track_frame:
+            if frame_fusion >= last_track_frame - N_FRAMES_POST_DISAPPEAR: #On retranche car la bulle peut disparaitre apres avoir merge (erreur de tracking, voir parentBubble.py)
                 for merger in mergers:
                     if track_id in merger[1:]:  # La bulle est un parent dans la fusion
-                        detach_frame = frame_fusion
+                        detach_frame = frame_fusion # ce n'est pas la frame ou elle se detache mais celle ou elle merge
                         merged = True
+                        child = merger[0] # id du child lors du merge
                         break
                 if merged:
                     break
@@ -187,16 +189,20 @@ def find_attachment_period(track_data, fusionList, last_frame,
             # La bulle reste attachée jusqu'à la fin de la vidéo
             dwell_frames = last_track_frame - attach_start + 1
             note = "attached_until_end"
+            note2 = None
         elif not merged:
             # Disparition inexpliquée
             dwell_frames = fr_smoothed[attach_end_idx] - attach_start + 1
-            note = "disappeared"
+            note = "disappeared after frame" 
+            note2 = (fr_smoothed[attach_end_idx])
         else:
             dwell_frames = detach_frame - attach_start
-            note = "MERGED"
+            note = "MERGED in" 
+            note2 = child
     else:
         dwell_frames = detach_frame - attach_start
         note = "DETACHED"
+        note2 = None
     
     dwell_frames = max(int(dwell_frames), 0)
     
@@ -205,9 +211,190 @@ def find_attachment_period(track_data, fusionList, last_frame,
         'detach_frame': detach_frame,
         'dwell_frames': dwell_frames,
         'note': note,
+        'note2': note2,
         'start_idx': start_idx,
         'end_frame': detach_frame if detach_frame else fr_smoothed[attach_end_idx]
     }
+
+# def followMerge(results):
+#     merge_df = results[results["note"] == "MERGED in"]
+#     results = results.set_index("bubble_id") #on defini l'index comme la colonne bubble_id pour simplifier les acces
+#     for mergeBb in merge_df:
+#         child = mergeBb["note2"]
+#         mergePath = str(mergeBb["bubble_id"]) + '->'+ str(child)
+#         first_frame = mergeBb["attach_start_frame"]
+#         dwell_frames = mergeBb["dwell_frames"] + results.at[child, "dwell_frames"]
+#         if results.at[child, "note"] == "MERGED in":
+#             pass
+#         else:
+#             return {
+#                 "bubble_id": mergePath,
+#                 "attach_start_frame": first_frame,
+#                 "detach_frame": results.at[child, "detach_frame"],
+#                 "dwell_frames": dwell_frames,
+#                 "dwell_seconds": dwell_seconds,
+#                 "n_frames_tracked": n_frames_tracked,
+#                 "n_unknown": n_unknown,
+#                 "mean_score_pct": mean_score_pct,
+#                 "note": attachment_info['note'],
+#                 "note2": attachment_info['note2']
+#             }
+#         {
+#                 'bubble_id': mergePath,
+#                 'attach_start': first_frame,
+#                 'detach_frame': results.at[child, "detach_frame"],
+#                 'dwell_frames': dwell_frames,
+#                 'note': results.at[child, "note"],
+#                 'note2': results.at[child, "note2"],
+#                 'start_idx': None,
+#                 'end_frame': results.at[child, "end_frame"]
+#             } 
+
+def followMerge(results):
+    # Créer une copie pour éviter les modifications sur l'original
+    results_copy = results.copy()
+    results_copy = results_copy.set_index("bubble_id")
+    
+    # Filtrer les bulles qui ont fusionné
+    merge_df = results[results["note"] == "merged"]
+    new_results = []
+    
+    # Parcourir chaque bulle qui a fusionné
+    for _, mergeBb in merge_df.iterrows():
+        child_id = mergeBb["bubble_id"]
+        
+        # Récupérer l'information de l'enfant depuis note2 (supposé contenir l'ID de l'enfant)
+        # Si note2 n'existe pas, on suppose que detach_frame contient l'ID de l'enfant
+        if "note2" in mergeBb and pd.notna(mergeBb["note2"]):
+            child = mergeBb["note2"]
+        else:
+            # Alternative: utiliser le detach_frame comme référence à l'enfant
+            # Cette logique dépend de votre implémentation précédente
+            child = mergeBb.get("detach_frame", None)
+        
+        if child is None or child not in results_copy.index:
+            continue
+            
+        mergePath = f"{child_id}->{child}"
+        first_frame = mergeBb["attach_start_frame"]
+        
+        # Calculer le dwell_frames cumulé
+        dwell_frames = mergeBb["dwell_frames"] + results_copy.at[child, "dwell_frames"]
+        
+        # Calculer le dwell_seconds cumulé
+        dwell_seconds = mergeBb["dwell_seconds"] + results_copy.at[child, "dwell_seconds"]
+        
+        # Calculer les autres métriques cumulées
+        n_frames_tracked = mergeBb["n_frames_tracked"] + results_copy.at[child, "n_frames_tracked"]
+        n_unknown = mergeBb["n_unknown"] + results_copy.at[child, "n_unknown"]
+        
+        # Calculer le score moyen pondéré
+        score1 = mergeBb["mean_score_pct"] if pd.notna(mergeBb["mean_score_pct"]) else 0
+        score2 = results_copy.at[child, "mean_score_pct"] if pd.notna(results_copy.at[child, "mean_score_pct"]) else 0
+        frames1 = mergeBb["n_frames_tracked"]
+        frames2 = results_copy.at[child, "n_frames_tracked"]
+        
+        if frames1 + frames2 > 0:
+            mean_score_pct = (score1 * frames1 + score2 * frames2) / (frames1 + frames2)
+        else:
+            mean_score_pct = np.nan
+        
+        # Vérifier si l'enfant a aussi fusionné (fusion en chaîne)
+        if results_copy.at[child, "note"] == "merged":
+            # Récursion pour suivre la chaîne de fusions
+            child_chain = followMerge_single(child, results_copy)
+            if child_chain:
+                # Mettre à jour avec les données de la chaîne complète
+                dwell_frames += child_chain["dwell_frames"] - results_copy.at[child, "dwell_frames"]
+                dwell_seconds += child_chain["dwell_seconds"] - results_copy.at[child, "dwell_seconds"]
+                final_child = child_chain["bubble_id"].split("->")[-1]
+                mergePath = f"{child_id}->{child_chain['bubble_id']}"
+                detach_frame = child_chain["detach_frame"]
+                note = child_chain["note"]
+            else:
+                detach_frame = results_copy.at[child, "detach_frame"]
+                note = "merged_chain"
+        else:
+            detach_frame = results_copy.at[child, "detach_frame"]
+            note = "merged"
+        
+        # Créer le nouvel enregistrement
+        new_record = {
+            "bubble_id": mergePath,
+            "attach_start_frame": first_frame,
+            "detach_frame": detach_frame,
+            "dwell_frames": dwell_frames,
+            "dwell_seconds": dwell_seconds,
+            "n_frames_tracked": n_frames_tracked,
+            "n_unknown": n_unknown,
+            "mean_score_pct": mean_score_pct,
+            "note": note,
+            "note2": f"fusion_chain_{child_id}_{child}"
+        }
+        
+        new_results.append(new_record)
+    
+    # Ajouter les nouveaux résultats à la liste originale (sans les enregistrements fusionnés individuels)
+    final_results = []
+    
+    # Garder seulement les bulles qui n'ont pas fusionné (ou sont le dernier maillon d'une chaîne)
+    non_merged_results = results[results["note"] != "merged"].copy()
+    final_results.extend(non_merged_results.to_dict('records'))
+    final_results.extend(new_results)
+    
+    return pd.DataFrame(final_results)
+
+def followMerge_single(child_id, results_df):
+    """
+    Fonction helper pour suivre une chaîne de fusions pour un enfant donné
+    """
+    if child_id not in results_df.index:
+        return None
+        
+    child_data = results_df.loc[child_id]
+    
+    if child_data["note"] != "merged":
+        return None
+    
+    # Récupérer l'enfant suivant
+    if "note2" in child_data and pd.notna(child_data["note2"]):
+        next_child = child_data["note2"]
+    else:
+        next_child = child_data.get("detach_frame", None)
+    
+    if next_child is None or next_child not in results_df.index:
+        return None
+    
+    # Récursivement suivre la chaîne
+    chain_result = followMerge_single(next_child, results_df)
+    
+    if chain_result:
+        # Combiner avec la chaîne existante
+        mergePath = f"{child_id}->{chain_result['bubble_id']}"
+        dwell_frames = child_data["dwell_frames"] + chain_result["dwell_frames"]
+        dwell_seconds = child_data["dwell_seconds"] + chain_result["dwell_seconds"]
+        
+        return {
+            "bubble_id": mergePath,
+            "attach_start_frame": child_data["attach_start_frame"],
+            "detach_frame": chain_result["detach_frame"],
+            "dwell_frames": dwell_frames,
+            "dwell_seconds": dwell_seconds,
+            "note": chain_result["note"]
+        }
+    else:
+        # Fin de la chaîne
+        return {
+            "bubble_id": f"{child_id}->{next_child}",
+            "attach_start_frame": child_data["attach_start_frame"],
+            "detach_frame": results_df.loc[next_child, "detach_frame"],
+            "dwell_frames": child_data["dwell_frames"] + results_df.loc[next_child, "dwell_frames"],
+            "dwell_seconds": child_data["dwell_seconds"] + results_df.loc[next_child, "dwell_seconds"],
+            "note": "merged_end"
+        }
+
+
+
 
 # Chargement des données
 rich_path = os.path.join(savefolder, f"rich_{extension}.csv")
@@ -233,9 +420,6 @@ for frame, tracks in fusionDict.items():
 
 # Paramètres
 tolerate_unknown_gap = 1
-class_idx_attached = 2  # À adapter selon vos constantes
-class_idx_detached = 0  # À adapter selon vos constantes
-class_idx_unknown = 1   # À adapter selon vos constantes
 fps = 4000  # Ou déterminer automatiquement comme dans l'ancien code
 
 last_frame = df_score['frame'].max()
@@ -247,12 +431,11 @@ for track_id in sorted(df_score['track_id'].unique()):
     
     # Calculer les statistiques de base
     n_frames_tracked = len(track_data)
-    n_unknown = len(track_data[track_data['class_id'] == class_idx_unknown])
+    n_unknown = len(track_data[track_data['class_id'] == UNKNOWN])
     
     # Trouver la période d'attachement
     attachment_info = find_attachment_period(
         track_data, fusionList, last_frame,
-        class_idx_attached, class_idx_detached,
         min_attached_run, tolerate_unknown_gap
     )
     
@@ -285,19 +468,25 @@ for track_id in sorted(df_score['track_id'].unique()):
         "n_frames_tracked": n_frames_tracked,
         "n_unknown": n_unknown,
         "mean_score_pct": mean_score_pct,
-        "note": attachment_info['note']
+        "note": attachment_info['note'],
+        "note2": attachment_info['note2']
     })
+
+
+final_results = followMerge(pd.DataFrame(results))
+
 
 # Sauvegarder les résultats
 out_csv = os.path.join(savefolder, f'dwell2_{extension}.csv')
-with open(out_csv, 'w', newline='') as f:
-    w = csv.DictWriter(f, fieldnames=[
-        "bubble_id", "attach_start_frame", "detach_frame",
-        "dwell_frames", "dwell_seconds", "n_frames_tracked",
-        "n_unknown", "mean_score_pct", "note"
-    ])
-    w.writeheader()
-    for r in results:
-        w.writerow(r)
+final_results.to_csv(out_csv, index=False)
+# with open(out_csv, 'w', newline='') as f:
+#     w = csv.DictWriter(f, fieldnames=[
+#         "bubble_id", "attach_start_frame", "detach_frame",
+#         "dwell_frames", "dwell_seconds", "n_frames_tracked",
+#         "n_unknown", "mean_score_pct", "note", "note2"
+#     ])
+#     w.writeheader()
+#     for r in results:
+#         w.writerow(r)
 
 print(f"Résultats sauvegardés dans: {out_csv}")
