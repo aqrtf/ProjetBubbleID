@@ -1,3 +1,2 @@
-2 fusions detect:
+1 fusions detect:
 Frame   8:  20 <- [9, 6]
-Frame  11:   6 <- [9, 20]

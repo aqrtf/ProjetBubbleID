@@ -256,7 +256,7 @@ def followMerge(results):
     results_copy = results_copy.set_index("bubble_id")
     
     # Filtrer les bulles qui ont fusionné
-    merge_df = results[results["note"] == "merged"]
+    merge_df = results[results["note"] == "MERGED in"]
     new_results = []
     
     # Parcourir chaque bulle qui a fusionné
@@ -300,7 +300,7 @@ def followMerge(results):
             mean_score_pct = np.nan
         
         # Vérifier si l'enfant a aussi fusionné (fusion en chaîne)
-        if results_copy.at[child, "note"] == "merged":
+        if results_copy.at[child, "note"] == "MERGED in":
             # Récursion pour suivre la chaîne de fusions
             child_chain = followMerge_single(child, results_copy)
             if child_chain:
