@@ -6,15 +6,15 @@ bubble_id,attach_start_frame,detach_frame,dwell_frames,dwell_seconds,n_frames_tr
 4,,,0,0.0,15,0,,no_attached_run,
 5,,,0,0.0,3,0,,no_attached_run,
 6,,,0,0.0,7,0,,no_attached_run,
-7,1.0,,15,0.00375,15,0,93.44924887021384,attached_until_end,
-8,1.0,,15,0.00375,15,0,92.241903146108,attached_until_end,
-9,1.0,8.0,7,0.00175,7,0,93.2766718523843,MERGED in,20.0
+7,1,,15,0.00375,15,0,93.44924887021384,attached_until_end,
+8,1,,15,0.00375,15,0,92.241903146108,attached_until_end,
+9,1,8,7,0.00175,7,0,93.2766718523843,MERGED in,20
 10,,,0,0.0,15,0,,no_attached_run,
 11,,,0,0.0,13,0,,no_attached_run,
-12,1.0,,4,0.001,2,0,70.97264528274536,disappeared after frame,4.0
+12,1,,4,0.001,2,0,70.97264528274536,disappeared after frame,4
 16,,,0,0.0,9,0,,no_attached_run,
 17,,,0,0.0,6,0,,no_attached_run,
-18,4.0,,2,0.0005,2,0,74.46716725826263,disappeared after frame,5.0
-20,8.0,14.0,6,0.0015,8,0,86.7614209651947,DETACHED,
-23,15.0,,1,0.00025,1,0,82.76519179344177,attached_until_end,
-9->20.0,1.0,14.0,13,0.0032500000000000003,15,0,89.80187137921651,merged,fusion_chain_9_20.0
+18,4,,2,0.0005,2,0,74.46716725826263,disappeared after frame,5
+20,8,14,6,0.0015,8,0,86.7614209651947,DETACHED,
+23,15,,1,0.00025,1,0,82.76519179344177,attached_until_end,
+9->20,1,14,13,0.0032500000000000003,15,0,89.80187137921651,DETACHED,

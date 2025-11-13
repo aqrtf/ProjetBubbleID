@@ -300,6 +300,7 @@ def followMerge(results):
             mean_score_pct = np.nan
         
         # Vérifier si l'enfant a aussi fusionné (fusion en chaîne)
+        note = results_copy.at[child, "note"]
         if results_copy.at[child, "note"] == "MERGED in":
             # Récursion pour suivre la chaîne de fusions
             child_chain = followMerge_single(child, results_copy)
@@ -313,10 +314,10 @@ def followMerge(results):
                 note = child_chain["note"]
             else:
                 detach_frame = results_copy.at[child, "detach_frame"]
-                note = "merged_chain"
+                note = child_chain["note"] # "merged_chain"
         else:
             detach_frame = results_copy.at[child, "detach_frame"]
-            note = "merged"
+            # note = "merged"
         
         # Créer le nouvel enregistrement
         new_record = {
@@ -329,7 +330,7 @@ def followMerge(results):
             "n_unknown": n_unknown,
             "mean_score_pct": mean_score_pct,
             "note": note,
-            "note2": f"fusion_chain_{child_id}_{child}"
+            "note2":  results_copy.at[child, "note2"] # f"fusion_chain_{child_id}_{child}"
         }
         
         new_results.append(new_record)
@@ -353,7 +354,7 @@ def followMerge_single(child_id, results_df):
         
     child_data = results_df.loc[child_id]
     
-    if child_data["note"] != "merged":
+    if child_data["note"] != "MERGED in":
         return None
     
     # Récupérer l'enfant suivant
@@ -390,7 +391,7 @@ def followMerge_single(child_id, results_df):
             "detach_frame": results_df.loc[next_child, "detach_frame"],
             "dwell_frames": child_data["dwell_frames"] + results_df.loc[next_child, "dwell_frames"],
             "dwell_seconds": child_data["dwell_seconds"] + results_df.loc[next_child, "dwell_seconds"],
-            "note": "merged_end"
+            "note": child_data["note"]
         }
 
 
@@ -472,9 +473,17 @@ for track_id in sorted(df_score['track_id'].unique()):
         "note2": attachment_info['note2']
     })
 
-
+results = pd.DataFrame(results).astype({
+    "attach_start_frame": "Int64",
+    "detach_frame": "Int64",
+    "note2": "Int64",
+})
 final_results = followMerge(pd.DataFrame(results))
-
+final_results = pd.DataFrame(final_results).astype({
+    "attach_start_frame": "Int64",
+    "detach_frame": "Int64",
+    "note2": "Int64",
+})
 
 # Sauvegarder les résultats
 out_csv = os.path.join(savefolder, f'dwell2_{extension}.csv')
