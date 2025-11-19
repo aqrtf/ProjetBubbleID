@@ -119,10 +119,10 @@ def followMerge(results):
         
         # Vérifier si l'enfant a aussi fusionné (fusion en chaîne)
         note2 = results_copy.at[child, "note2"]
-        if not note2:
+        if note2 is not None:
             # Récursion pour suivre la chaîne de fusions
             child_chain = followMerge_single(child, results_copy)
-            if child_chain:
+            if child_chain is not None:
                 # Mettre à jour avec les données de la chaîne complète
                 dwell_frames += child_chain["dwell_frames"] - results_copy.at[child, "dwell_frames"]
                 dwell_seconds += child_chain["dwell_seconds"] - results_copy.at[child, "dwell_seconds"]
@@ -132,7 +132,7 @@ def followMerge(results):
                 note = child_chain["note"]
             else:
                 detach_frame = results_copy.at[child, "detach_frame"]
-                note = child_chain["note"] # "merged_chain"
+                note = results_copy.at[child, "note"]
         else:
             detach_frame = results_copy.at[child, "detach_frame"]
             # note = "merged"
@@ -351,15 +351,16 @@ results = pd.DataFrame(results).astype({
     "note2": "Int64",
     "dwell_frames": "Int64",
 })
-# final_results = followMerge(pd.DataFrame(results))
-# final_results = pd.DataFrame(final_results).astype({
-#     "attach_start_frame": "Int64",
-#     "detach_frame": "Int64",
-#     "note2": "Int64",
-# })
+final_results = followMerge(pd.DataFrame(results))
+final_results = pd.DataFrame(final_results).astype({
+    "attach_start_frame": "Int64",
+    "detach_frame": "Int64",
+    "note2": "Int64",
+    "dwell_frames": "Int64",
+})
 
 # Sauvegarder les résultats
 out_csv = os.path.join(savefolder, f'dwell4_{extension}.csv')
-results.to_csv(out_csv, index=False)
+final_results.to_csv(out_csv, index=False)
 
 print(f"Résultats sauvegardés dans: {out_csv}")
