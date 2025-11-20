@@ -3,10 +3,10 @@ import pandas as pd
 from csteDef import *
 
 min_attached_run=0
-savefolder=r"My_output\Test6"   # Define the folder you want the data to save in
-extension="Test6" 
-# savefolder=r"My_output\SaveData3"   # Define the folder you want the data to save in
-# extension="T113_2_60V_2" 
+# savefolder=r"My_output\Test6"   # Define the folder you want the data to save in
+# extension="Test6" 
+savefolder=r"My_output\SaveData3"   # Define the folder you want the data to save in
+extension="T113_2_60V_2" 
 score_thres = 0.7
 N_FRAMES_POST_DISAPPEAR = 2
 
@@ -56,13 +56,13 @@ def followMerge(results):
     results_copy = results_copy.set_index("bubble_id")
     
     # Filtrer les bulles qui ont fusionné
-    merge_df = results[results["note2"] != None]
+    merge_df = results[results["child_id"] != None]
     new_results = []
     
     # Parcourir chaque bulle qui a fusionné
     for _, mergeBb in merge_df.iterrows():
         child_id = mergeBb["bubble_id"]
-        child = mergeBb["note2"]
+        child = mergeBb["child_id"]
         
         if child is None or child not in results_copy.index:
             continue
@@ -92,8 +92,8 @@ def followMerge(results):
             mean_score_pct = np.nan
         
         # Vérifier si l'enfant a aussi fusionné (fusion en chaîne)
-        note2 = results_copy.at[child, "note2"]
-        if note2 is not None:
+        noteChild = results_copy.at[child, "child_id"]
+        if noteChild is not None:
             # Récursion pour suivre la chaîne de fusions
             child_chain = followMerge_single(child, results_copy)
             if child_chain is not None:
@@ -121,8 +121,8 @@ def followMerge(results):
             "n_frames_tracked": n_frames_tracked,
             "n_unknown": n_unknown,
             "mean_score_pct": mean_score_pct,
+            "child_id":  results_copy.at[child, "child_id"],
             "note": note,
-            "note2":  results_copy.at[child, "note2"] # f"fusion_chain_{child_id}_{child}"
         }
         
         new_results.append(new_record)
@@ -146,11 +146,11 @@ def followMerge_single(child_id, results_df):
         
     child_data = results_df.loc[child_id]
     
-    if child_data["note2"] == None:
+    if child_data["child_id"] == None:
         return None
     
     # Récupérer l'enfant suivant
-    next_child = child_data["note2"]
+    next_child = child_data["child_id"]
     
     if next_child is None or next_child not in results_df.index:
         return None
@@ -212,20 +212,9 @@ df_filter = (df_filter.sort_values(["track_id", "frame", "score"], ascending=[Tr
 df_score = df_filter[["track_id", "frame", "score", "class_id"]].copy()
 
 df_score, df_fusion = _replaceChangedID(df_score, df_fusion, changeID_df)
-# on remplace fusionDict en un dataframe
-# rows = []
-# for frame, tracks in fusionDict.items():
-#     for child, parents in tracks.items():
-#         parent1 = parents[0] 
-#         parent2 = parents[1] 
-#         if len(parents) > 2:
-#             print(f"WARNING: bubble {child} (frame {frame}) has more than 2 parents")
-#         rows.append({"frame": frame, "child": child, "parent1": parent1, "parent2": parent2})
 
-# df_fusion = pd.DataFrame(rows)
-print(df_fusion)
 # Paramètres
-fps = 4000  # Ou déterminer automatiquement comme dans l'ancien code
+fps = 4000  # TODO Ou déterminer automatiquement comme dans l'ancien code
 
 last_frame = df_score['frame'].max()
 results = []
@@ -237,6 +226,7 @@ for track_id in sorted(df_score['track_id'].unique()):
     noteChild = None
     detach_frame = None
     attach_start_frame = None
+    isDetached = False
     
     
     track_data = df_score[df_score['track_id'] == track_id].sort_values('frame')
@@ -277,6 +267,7 @@ for track_id in sorted(df_score['track_id'].unique()):
                     note += "..."
                 else:
                     note = note + "/DETACHED"
+                    isDetached = True
                 
         else: # la bulle va merge
             note = note + "/PARENT"
@@ -324,22 +315,23 @@ for track_id in sorted(df_score['track_id'].unique()):
         "n_unknown": n_unknown,
         "missing_detection": n_frame_undetected,
         "mean_score_pct": mean_score,
+        "child_id":  noteChild,
+        "detachs?": isDetached,
         "note": note,
-        "note2":  noteChild
     })
         
 
 results = pd.DataFrame(results).astype({
     "attach_start_frame": "Int64",
     "detach_frame": "Int64",
-    "note2": "Int64",
+    "child_id": "Int64",
     "dwell_frames": "Int64",
 })
 final_results = followMerge(pd.DataFrame(results))
 final_results = pd.DataFrame(final_results).astype({
     "attach_start_frame": "Int64",
     "detach_frame": "Int64",
-    "note2": "Int64",
+    "child_id": "Int64",
     "dwell_frames": "Int64",
 })
 
