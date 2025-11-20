@@ -10,73 +10,45 @@ extension="Test6"
 score_thres = 0.7
 N_FRAMES_POST_DISAPPEAR = 2
 
-from parentBubble4 import findMerge
-fusionDict, changeIDList = findMerge(savefolder, extension, score_thres=0.7, OVERLAP_THRESH=0.1,
-                                    MIN_OVERLAP_SAME=0.7, POST_FUSION_FRAMES=2, N_FRAMES_PREVIOUS_DISAPPEAR=3, 
-                                    N_FRAMES_POST_DISAPPEAR=2,
-                                    IMAGE_SHAPE=(1024, 1024), DILATE_ITERS=1
-                                    )
 
-def _replaceChangedID(rich_df, fusionDict, changeIDList):   
+def _replaceChangedID(rich_df, fusion_df, changeID_df):
     """
-    Modifie le dataframe rich et le fusionDict pour prendre en compte les changement de track id reperes
+    Modifie le dataframe rich et le fusion_df pour prendre en compte les changements de track id
+    
     Args:
-        rich_df (df): 
-        fusionDict (dict): Dictionnaire des fusions sous forme {frame: {child_id: [parent_ids]}}
-        changeIDList (list): Liste des corrections à appliquer sous forme [[frame, new_id, old_id], ...]
+        rich_df (pd.DataFrame): DataFrame rich avec les colonnes ['track_id', 'frame', ...]
+        fusion_df (pd.DataFrame): DataFrame des fusions avec colonnes ['frame', 'child', 'parent1', 'parent2', ...]
+        changeID_df (pd.DataFrame): DataFrame des corrections avec colonnes ['frame', 'new_id', 'old_id']
     
     Returns:
-        df: rich dataframe avec les trackid corrige
-        dict: Dictionnaire fusion corrigé avec les IDs mis à jour 
+        pd.DataFrame: rich dataframe avec les track_id corrigés
+        pd.DataFrame: DataFrame fusion corrigé avec les IDs mis à jour
     """
-    for frame, new_id, old_id in changeIDList:
-        rich_df.loc[(rich_df['frame'] >= frame) & (rich_df['track_id'] == new_id), 'track_id'] = old_id
-        
-    # Dictionnaire qui contiendra les résultats corrigés
-    fusion_corrige = {}
     
-    # Parcourir chaque frame et ses fusions dans le dictionnaire original
-    for frame_fusion, fusions in fusionDict.items():
-        # Dictionnaire temporaire pour stocker les fusions corrigées de cette frame
-        nouvelles_fusions = {}
-        
-        # Parcourir chaque paire child_id -> parent_ids dans les fusions de cette frame
-        for child_id, parent_ids in fusions.items():
-            # Créer un mapping de correction spécifique pour CETTE frame
-            # Seules les corrections avec frame_corr <= frame_fusion seront appliquées
-            correction_map = {}
-            for frame_corr, new_id, old_id in changeIDList:
-                # Condition clé : n'appliquer la correction que si la frame actuelle 
-                # est postérieure ou égale à la frame de correction
-                if frame_fusion >= frame_corr:
-                    correction_map[new_id] = old_id  # Mapper new_id vers old_id
-            
-            # Appliquer les corrections au child_id actuel
-            # Si child_id est dans correction_map, on prend la valeur corrigée, sinon on garde l'original
-            child_corrige = correction_map.get(child_id, child_id)
-            
-            # Appliquer les corrections à chaque parent_id dans la liste
-            # Pour chaque parent_id, on vérifie s'il doit être corrigé
-            parents_corriges = [
-                correction_map.get(pid, pid) for pid in parent_ids
-            ]
-            
-            # Gérer les doublons de clés (si deux child_id différents deviennent identiques après correction)
-            if child_corrige in nouvelles_fusions:
-                # Si le child_id corrigé existe déjà, fusionner les listes de parents
-                nouvelles_fusions[child_corrige].extend(parents_corriges)
-                # Supprimer les doublons dans la liste des parents fusionnés
-                nouvelles_fusions[child_corrige] = list(set(nouvelles_fusions[child_corrige]))
-            else:
-                # Si le child_id corrigé n'existe pas encore, créer une nouvelle entrée
-                nouvelles_fusions[child_corrige] = parents_corriges
-        
-        # Assigner les fusions corrigées de cette frame au dictionnaire résultat
-        fusion_corrige[frame_fusion] = nouvelles_fusions
+    # Créer des copies pour éviter les modifications des données originales
+    rich_corrige = rich_df.copy()
+    fusion_corrige = fusion_df.copy()
+    changeID_df = changeID_df.copy()
     
-    # Retourner le dictionnaire complet avec toutes les corrections appliquées
-    return rich_df, fusion_corrige
- 
+    # 1. Corriger le rich_df
+    # Trier les corrections par frame croissant pour appliquer dans l'ordre
+    changeID_sorted = changeID_df.sort_values('frame')
+    
+    for _, correction in changeID_sorted.iterrows():
+        frame_corr = correction['frame']
+        new_id = correction['new_id']
+        old_id = correction['old_id']
+        
+        # Appliquer la correction : pour toutes les frames >= frame_corr, remplacer new_id par old_id
+        mask = (rich_corrige["frame"] >= frame_corr) & (rich_corrige["track_id"] == new_id)
+        rich_corrige.loc[mask, "track_id"] = old_id
+
+
+        cols = ["child", "parent1", "parent2"] # colonne a modifier
+        mask = (fusion_corrige["frame"] >= frame_corr)
+        fusion_corrige.loc[mask, cols] = fusion_corrige.loc[mask, cols].replace(new_id, old_id)
+
+    return rich_corrige, fusion_corrige
 
 def followMerge(results):
     # Créer une copie pour éviter les modifications sur l'original
@@ -220,6 +192,16 @@ if not os.path.isfile(rich_path):
     raise FileNotFoundError("rich_ file not found")
 rich_df = pd.read_csv(rich_path)
 
+path = os.path.join(savefolder, f"fusionResult_{extension}.csv")
+if not os.path.isfile(rich_path):
+    raise FileNotFoundError(f"{path} not found")
+df_fusion = pd.read_csv(path)
+
+path = os.path.join(savefolder, f"changeIDResult_{extension}.csv")
+if not os.path.isfile(rich_path):
+    raise FileNotFoundError("rich_ file not found")
+changeID_df = pd.read_csv(path)
+
 # Supprimer les lignes dont le score est inférieur à score_thres
 df_filter = rich_df[rich_df['score'] >= score_thres]
 
@@ -229,18 +211,18 @@ df_filter = (df_filter.sort_values(["track_id", "frame", "score"], ascending=[Tr
 
 df_score = df_filter[["track_id", "frame", "score", "class_id"]].copy()
 
-df_score, fusionDict = _replaceChangedID(df_score, fusionDict, changeIDList)
+df_score, df_fusion = _replaceChangedID(df_score, df_fusion, changeID_df)
 # on remplace fusionDict en un dataframe
-rows = []
-for frame, tracks in fusionDict.items():
-    for child, parents in tracks.items():
-        parent1 = parents[0] 
-        parent2 = parents[1] 
-        if len(parents) > 2:
-            print(f"WARNING: bubble {child} (frame {frame}) has more than 2 parents")
-        rows.append({"frame": frame, "child": child, "parent1": parent1, "parent2": parent2})
+# rows = []
+# for frame, tracks in fusionDict.items():
+#     for child, parents in tracks.items():
+#         parent1 = parents[0] 
+#         parent2 = parents[1] 
+#         if len(parents) > 2:
+#             print(f"WARNING: bubble {child} (frame {frame}) has more than 2 parents")
+#         rows.append({"frame": frame, "child": child, "parent1": parent1, "parent2": parent2})
 
-df_fusion = pd.DataFrame(rows)
+# df_fusion = pd.DataFrame(rows)
 print(df_fusion)
 # Paramètres
 fps = 4000  # Ou déterminer automatiquement comme dans l'ancien code

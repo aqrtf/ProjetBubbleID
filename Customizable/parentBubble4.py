@@ -1,7 +1,7 @@
 # TODO il ne faut pas que l'intersection des parents soit trop importante
 
 
-import json
+import json, os
 import pandas as pd
 import numpy as np
 import cv2
@@ -518,12 +518,25 @@ def track_id_changes(json_path, csv_path, outputFile, N_FRAMES_PREVIOUS_DISAPPEA
     return parentsList_return
 
 
-def exportData(parentsDict, outputFile):
-    with open(outputFile, 'w') as file:
-        file.write(f"{len(parentsDict)} fusions detect:\n")
-        for frame, tracks in parentsDict.items():
-            for new_tid, parents in tracks.items():
-                file.write(f"Frame {frame:3d}: {new_tid:3d} <- {parents}\n") 
+def exportData(fusionDict, changeIDList, savefolder):
+    # on remplace fusionDict en un dataframe
+    rows = []
+    for frame, tracks in fusionDict.items():
+        for child, parents in tracks.items():
+            parent1 = parents[0] 
+            parent2 = parents[1] 
+            if len(parents) > 2:
+                print(f"WARNING: bubble {child} (frame {frame}) has more than 2 parents")
+            rows.append({"frame": frame, "child": child, "parent1": parent1, "parent2": parent2})
+    df_fusion = pd.DataFrame(rows)
+    out_csv = os.path.join(savefolder, f'fusionResult_{extension}.csv')
+    df_fusion.to_csv(out_csv, index=False)
+
+    df_changeID = pd.DataFrame(changeIDList, columns=["frame", "new_id", "old_id"])
+    out_csv = os.path.join(savefolder, f'changeIDResult_{extension}.csv')
+    df_changeID.to_csv(out_csv, index=False)
+
+
 
 # ------------------------
 # EXÉCUTION
@@ -586,7 +599,6 @@ def findMerge(dataFolder, extension, score_thres=0.7, OVERLAP_THRESH=0.1,
     contourFile = dataFolder + "/contours_" + extension +".json"  # Fichier des contours
     richFile = dataFolder + "/rich_" + extension +".csv"  # Fichier de tracking
     outputFileHistoryPath = dataFolder + "/fusionHistory_" + extension + ".txt"
-    outputFileResultPath = dataFolder + "/fusionResult_" + extension + ".txt"
     
     # Lance la détection des fusions
     with open(outputFileHistoryPath, 'w') as f:
@@ -638,16 +650,16 @@ def findMerge(dataFolder, extension, score_thres=0.7, OVERLAP_THRESH=0.1,
     #TODO il faut faire pareil pour les merges
       
     # Export des résultats finaux
-    exportData(fusionDict, outputFileResultPath)
+    exportData(fusionDict, changeIDList_clean, dataFolder)
     
     return fusionDict, changeIDList_clean
 
 ######################################################################################################
 
-# dataFolder = "My_output/Test6/"
-# extension = "Test6"
-# findMerge(dataFolder, extension, score_thres=0.7, OVERLAP_THRESH=0.1,
-#                                     MIN_OVERLAP_SAME=0.7, POST_FUSION_FRAMES=2, N_FRAMES_PREVIOUS_DISAPPEAR=3, 
-#                                     N_FRAMES_POST_DISAPPEAR=2,
-#                                     IMAGE_SHAPE=(1024, 1024), DILATE_ITERS=1
-#                                     )
+dataFolder = "My_output/Test6/"
+extension = "Test6"
+findMerge(dataFolder, extension, score_thres=0.7, OVERLAP_THRESH=0.1,
+                                    MIN_OVERLAP_SAME=0.7, POST_FUSION_FRAMES=2, N_FRAMES_PREVIOUS_DISAPPEAR=3, 
+                                    N_FRAMES_POST_DISAPPEAR=2,
+                                    IMAGE_SHAPE=(1024, 1024), DILATE_ITERS=1
+                                    )
