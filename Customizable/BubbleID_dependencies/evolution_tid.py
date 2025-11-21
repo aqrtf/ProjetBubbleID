@@ -52,8 +52,6 @@ for track_id in sorted(df_score['track_id'].unique()):
     
     track_data = df_score[df_score['track_id'] == track_id].sort_values('frame')
     
-    
-
     evolution_tid = [None] * last_frame
     first_seen_frame = track_data["frame"].min()
     last_seen_frame = track_data["frame"].max()
@@ -89,28 +87,18 @@ for track_id in sorted(df_score['track_id'].unique()):
             raise ValueError("Plusieurs valeurs trouvées")
  
 
-    # # indices des entiers dans evolution_tid
-    # int_indices = [i for i, x in enumerate(evolution_tid) if isinstance(x, int)]
-    # if not int_indices:
-    #     n_frames_tracked = missing_frame = -1  # aucun entier
-    # else:
-    #     start, end = int_indices[0], int_indices[-1]
-    #     sublist = evolution_tid[start:end+1]
-    #     # nb d'entier = nb de frame ou la bulle est detectee
-    #     n_frames_tracked = sum(isinstance(x, int) for x in sublist)
-    #     # nb de none entre les entiers = nb de frame ou la bulle n'est pas detecte 
-    #     # peut etre qu'elle n'est pas detecte apres ou avant mais pas moyen de le savoir
-    #     missing_frame = sum(x is None for x in sublist)
-    
+    # indices des entiers dans evolution_tid
     not_none_idx = [i for i, x in enumerate(evolution_tid) if x is not None]
     if not not_none_idx:
         n_frames_tracked = missing_frame = -1  # aucun entier
-    
-    start, end = not_none_idx[0], not_none_idx[-1]
-    sublist = evolution_tid[start:end+1]
-    
-    n_frames_tracked = sum(x is not None for x in sublist)
-    missing_frame = sum(x is None for x in sublist)
+    else:
+        start, end = not_none_idx[0], not_none_idx[-1]
+        sublist = evolution_tid[start:end+1]
+        # nb d'entier = nb de frame ou la bulle est detectee
+        n_frames_tracked = sum(x is not None for x in sublist)
+        # nb de none entre les entiers = nb de frame ou la bulle n'est pas detecte 
+        # peut etre qu'elle n'est pas detecte apres ou avant mais pas moyen de le savoir
+        missing_frame = sum(x is None for x in sublist)
     
     # # mean score
     mean_score = score/n_frames_tracked
@@ -127,8 +115,8 @@ for track_id in sorted(df_score['track_id'].unique()):
         
 
 results = pd.DataFrame(results).astype({
-    "first_seen_frame": "Int64",
-    "last_seen_frame": "Int64",
+    "first_seen_frame": "Int16",
+    "last_seen_frame": "Int16",
 })
 
 # On retire les lignes qui sont une partie des autres

@@ -1,19 +1,17 @@
-bubble_id,attach_start_frame,detach_frame,dwell_frames,dwell_seconds,n_frames_tracked,n_unknown,missing_detection,mean_score_pct,child_id,detachs?,note
-0,,,,,15,0,0,,,False,no_attached_run
-1,,,,,15,0,0,,,False,no_attached_run
-2,,,,,15,0,0,,,False,no_attached_run
-3,,,,,15,0,0,,,False,no_attached_run
-4,,,,,15,0,0,,,False,no_attached_run
-5,,,,,3,0,0,,,False,no_attached_run
-6<->20<->6,11,14,3,0.00075,10,0,5,0.8537350296974182,,True,
-7,1,,,,15,0,0,0.9344924887021383,,False,attach_until_end
-8,1,,,,15,0,0,0.92241903146108,,False,attach_until_end
-9->20<->6<->20<->6,1,14,13,0.00325,7,0,0,0.9001904640878949,,True,
-10,,,,,15,0,0,,,False,no_attached_run
-11,4,5,1,0.00025,13,0,2,0.809578150510788,,True,
-12,1,,,,2,0,2,0.09463019371032715,,False,disappear after frame 4
-16,,,,,9,0,0,,,False,no_attached_run
-17,,,,,6,0,0,,,False,no_attached_run
-18,4,,,,2,0,0,0.12411194543043773,,False,disappear after frame 5
-20<->6<->20<->6,8,14,6,0.0015,5,0,1,0.867614209651947,,True,
-23,15,,,,1,0,0,0.8276519179344177,,False,attach_until_end
+bubble_id,attach_start_frame,last_attach_frame,detach_frame,dwell_frames,dwell_seconds,n_frames_tracked,n_unknown,missing_detection,mean_score_pct,detachs?,note
+11,4,4,5,1,0.00025,13,0,0,0.809578150510788,True,DETACH
+9=>20<->6<->20<->6,1,13,14,13,0.00325,7,0,0,0.9001904640878949,True,DETACH
+0,,,,,,15,0,0,,False,no_attached_run
+1,,,,,,15,0,0,,False,no_attached_run
+2,,,,,,15,0,0,,False,no_attached_run
+3,,,,,,15,0,0,,False,no_attached_run
+4,,,,,,15,0,0,,False,no_attached_run
+5,,,,,,3,0,0,,False,no_attached_run
+7,1,15,,,,15,0,0,0.9344924887021383,False,attach_until_end
+8,1,15,,,,15,0,0,0.92241903146108,False,attach_until_end
+10,,,,,,15,0,0,,False,no_attached_run
+12,1,4,,,,2,0,3,0.09463019371032715,False,disappear after frame 4
+16,,,,,,9,0,0,,False,no_attached_run
+17,,,,,,6,0,0,,False,no_attached_run
+18,4,5,,,,2,0,1,0.12411194543043773,False,disappear after frame 5
+23,15,15,,,,1,0,1,0.8276519179344177,False,attach_until_end

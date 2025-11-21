@@ -1,17 +1,20 @@
 import pandas as pd
 
-df = pd.DataFrame({
-    'A': [1, 'x', 3, 'x', 5],
-    'B': ['x', 2, 'x', 4, 5],
-    'C': [10, 20, 30, 40, 50]
-})
+def count_ints_and_nones(lst):
+    # indices des entiers
+    int_indices = [i for i, x in enumerate(lst) if isinstance(x, int)]
+    if not int_indices:
+        return 0, 0  # aucun entier
+    
+    start, end = int_indices[0], int_indices[-1]
+    sublist = lst[start:end+1]
+    
+    num_ints = sum(isinstance(x, int) for x in sublist)
+    num_nones = sum(x is None for x in sublist)
+    
+    return num_ints, num_nones
 
-# Remplacer seulement dans certaines colonnes
-df_specific = df.replace({'A': {'x': 'remplacé_A'}, 'B': {'x': 'remplacé_B'}})
-print("Remplacement par colonne:")
-print(df_specific)
+# Exemple
+lst = [None, None, 5, None, 7, None, 9, None]
+print(count_ints_and_nones(lst))  # (3, 2)
 
-# Utiliser where pour des conditions complexes
-df_where = df.where(df != 'x', 'conditionnel')
-print("\nAvec where:")
-print(df_where)
