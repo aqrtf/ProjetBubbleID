@@ -1,0 +1,137 @@
+PARAMETERS:
+	DILATE_ITERS = 1
+	OVERLAP_THRESH = 0.1
+	POST_FUSION_FRAMES = 2
+	N_FRAMES_PREVIOUS_DISAPPEAR = 3
+	N_FRAMES_POST_DISAPPEAR = 2
+	score_thres = 0.7
+	MAX_IOU_PARENTS = 0.7
+
+##########################################################
+Frame 4:
+	1 new bubbles: [4]
+	Bubbles disappear btw frame 1 and 6:
+		Frame 4: [3]
+			Found parent: 3 (frame 4) -> 4, ratio: 0.938
+Frame 10:
+	1 new bubbles: [5]
+	Bubbles disappear btw frame 7 and 12:
+		Frame 12: [5]
+Frame 13:
+	1 new bubbles: [5]
+	Bubbles disappear btw frame 10 and 15:
+		Frame 12: [5]
+		Frame 14: [5]
+Frame 15:
+	1 new bubbles: [5]
+	Bubbles disappear btw frame 12 and 17:
+		Frame 12: [5]
+		Frame 14: [5]
+		Frame 16: [5]
+Frame 17:
+	1 new bubbles: [3]
+	Bubbles disappear btw frame 14 and 19:
+		Frame 14: [5]
+			Found parent: 5 (frame 14) -> 3, ratio: 0.758
+		Frame 16: [5]
+			Found parent: 5 (frame 16) -> 3, ratio: 0.768
+		Frame 18: [3, 4]
+Frame 19:
+	1 new bubbles: [4]
+	Bubbles disappear btw frame 16 and 21:
+		Frame 16: [5]
+			Found parent: 5 (frame 16) -> 4, ratio: 0.396
+		Frame 18: [3, 4]
+			Found parent: 3 (frame 18) -> 4, ratio: 0.492
+Frame 23:
+	1 new bubbles: [3]
+	Bubbles disappear btw frame 20 and 25:
+		Frame 23: [4]
+			Found parent: 4 (frame 23) -> 3, ratio: 0.941
+		Frame 24: [3]
+Frame 25:
+	2 new bubbles: [4, 6]
+	Bubbles disappear btw frame 22 and 27:
+		Frame 23: [4]
+		Frame 24: [3]
+			Found parent: 3 (frame 24) -> 4, ratio: 0.902
+		Frame 26: [4]
+		Frame 27: [3]
+		Frame 23: [4]
+		Frame 24: [3]
+		Frame 26: [4]
+		Frame 27: [3]
+Frame 26:
+	1 new bubbles: [3]
+	Bubbles disappear btw frame 23 and 28:
+		Frame 23: [4]
+			Found parent: 4 (frame 23) -> 3, ratio: 0.758
+		Frame 24: [3]
+		Frame 26: [4]
+			Found parent: 4 (frame 26) -> 3, ratio: 0.855
+		Frame 27: [3]
+Frame 28:
+	1 new bubbles: [3]
+	Bubbles disappear btw frame 25 and 30:
+		Frame 26: [4]
+			Found parent: 4 (frame 26) -> 3, ratio: 0.793
+		Frame 27: [3]
+		Frame 29: [3]
+		Frame 30: [4]
+			Found parent: 4 (frame 30) -> 3, ratio: 0.971
+Frame 29:
+	1 new bubbles: [4]
+	Bubbles disappear btw frame 26 and 31:
+		Frame 26: [4]
+		Frame 27: [3]
+			Found parent: 3 (frame 27) -> 4, ratio: 0.813
+		Frame 29: [3]
+			Found parent: 3 (frame 29) -> 4, ratio: 0.926
+		Frame 30: [4]
+Frame 30:
+	1 new bubbles: [3]
+	Bubbles disappear btw frame 27 and 32:
+		Frame 27: [3]
+		Frame 29: [3]
+		Frame 30: [4]
+			Found parent: 4 (frame 30) -> 3, ratio: 0.914
+Frame 50:
+	1 new bubbles: [7]
+	Bubbles disappear btw frame 47 and 52:
+		Frame 48: [3]
+			Found parent: 3 (frame 48) -> 7, ratio: 0.758
+		Frame 49: [6]
+			Found parent: 6 (frame 49) -> 7, ratio: 0.197
+		Frame 52: [7]
+Frame 52:
+	1 new bubbles: [3]
+	Bubbles disappear btw frame 49 and 54:
+		Frame 49: [6]
+			Found parent: 6 (frame 49) -> 3, ratio: 0.147
+		Frame 52: [7]
+			Found parent: 7 (frame 52) -> 3, ratio: 0.947
+		Frame 54: [7]
+			Found parent: 7 (frame 54) -> 3, ratio: 0.949
+Frame 53:
+	1 new bubbles: [7]
+	Bubbles disappear btw frame 50 and 55:
+		Frame 52: [7]
+		Frame 54: [7]
+		Frame 55: [3]
+			Found parent: 3 (frame 55) -> 7, ratio: 0.946
+Frame 55:
+	1 new bubbles: [7]
+	Bubbles disappear btw frame 52 and 57:
+		Frame 52: [7]
+		Frame 54: [7]
+		Frame 55: [3]
+			Found parent: 3 (frame 55) -> 7, ratio: 0.913
+Frame 57:
+	1 new bubbles: [8]
+	Bubbles disappear btw frame 54 and 59:
+		Frame 54: [7]
+		Frame 55: [3]
+##########################################################
+Results:
+	Frame  50:   7 <- [3, 6]
+	Frame  52:   3 <- [6, 7]

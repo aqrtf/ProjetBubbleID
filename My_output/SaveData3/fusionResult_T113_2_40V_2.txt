@@ -1,0 +1,3 @@
+2 fusions detect:
+Frame  50:   7 <- [3, 6]
+Frame  52:   3 <- [6, 7]

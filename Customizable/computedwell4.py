@@ -5,6 +5,8 @@ from csteDef import *
 min_attached_run=0
 savefolder=r"My_output\Test6"   # Define the folder you want the data to save in
 extension="Test6" 
+# savefolder=r"My_output\SaveData3"   # Define the folder you want the data to save in
+# extension="T113_2_60V_2" 
 score_thres = 0.7
 N_FRAMES_POST_DISAPPEAR = 2
 
@@ -299,12 +301,12 @@ for track_id in sorted(df_score['track_id'].unique()):
             df_merge = df_fusion[(df_fusion["parent1"] == track_id) | (df_fusion["parent2"] == track_id)]
             if len(df_merge)>1:
                 note += "Warning more than 1 merge for this bubble"
-            frame_merge = df_merge.at[0, "frame"]
+            frame_merge = df_merge.iloc[0]["frame"]
             # detach_frame = track_data.loc[track_data["class_id"] == DETACHED, "frame"].iloc[0]
             if DETACHED not in track_data["class_id"].values: #la bulle n'est jamais detachee
                 detach_frame = frame_merge
-                note += "/CHILD=" + str(df_merge.at[0, "child"])
-                noteChild = df_merge.at[0, "child"]
+                note += "/CHILD=" + str(df_merge.iloc[0]["child"])
+                noteChild = df_merge.iloc[0]["child"]
         
     
     

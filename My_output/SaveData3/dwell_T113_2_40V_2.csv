@@ -1,0 +1,10 @@
+bubble_id,attach_start_frame,detach_frame,dwell_frames,dwell_seconds,n_frames_tracked,n_unknown,mean_score_pct,note
+0,,,0,0.0,59,0,nan,no_attached_run
+1,,,0,0.0,34,0,nan,no_attached_run
+2,,,0,0.0,59,0,nan,no_attached_run
+3,23,27,4,0.001,34,2,68.1329882144928,ok
+4,3,6,3,0.00075,29,0,91.0015195608139,ok
+5,,,0,0.0,7,5,nan,no_attached_run
+6,25,,23,0.00575,23,0,95.18206300942794,no_detach_found
+7,45,47,2,0.0005,16,0,56.31447037061056,ok
+8,57,,3,0.00075,4,0,71.51487668355307,no_detach_found

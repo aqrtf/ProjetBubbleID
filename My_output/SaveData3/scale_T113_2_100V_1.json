@@ -1,0 +1,20 @@
+{
+  "mm_per_px": 0.023823089770318745,
+  "px_per_mm": 41.976083272200185,
+  "physical_mm_between_points": 20.0,
+  "frame_idx": 0,
+  "pt1": [
+    104,
+    884
+  ],
+  "pt2": [
+    944,
+    892
+  ],
+  "image_size_hw": [
+    1024,
+    1024
+  ],
+  "timestamp": "2025-10-31 11:37:33",
+  "ui": "matplotlib_cursor"
+}
