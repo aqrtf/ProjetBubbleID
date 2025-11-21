@@ -1,7 +1,7 @@
 # TODO il ne faut pas que l'intersection des parents soit trop importante
 
 
-import json, os
+import json, os, copy
 import pandas as pd
 import numpy as np
 import cv2
@@ -518,7 +518,7 @@ def track_id_changes(json_path, csv_path, outputFile, N_FRAMES_PREVIOUS_DISAPPEA
     return parentsList_return
 
 
-def exportData(fusionDict, changeIDList, savefolder):
+def exportData(fusionDict, changeIDList, changeIDList_all, savefolder):
     # on remplace fusionDict en un dataframe
     rows = []
     for frame, tracks in fusionDict.items():
@@ -534,6 +534,10 @@ def exportData(fusionDict, changeIDList, savefolder):
 
     df_changeID = pd.DataFrame(changeIDList, columns=["frame", "new_id", "old_id"])
     out_csv = os.path.join(savefolder, f'changeIDResult_{extension}.csv')
+    df_changeID.to_csv(out_csv, index=False)
+
+    df_changeID = pd.DataFrame(changeIDList_all, columns=["frame", "new_id", "old_id"])
+    out_csv = os.path.join(savefolder, f'changeIDResultAll_{extension}.csv')
     df_changeID.to_csv(out_csv, index=False)
 
 
@@ -634,7 +638,7 @@ def findMerge(dataFolder, extension, score_thres=0.7, OVERLAP_THRESH=0.1,
                                         existing_fusions=fusionDict,
                                         image_shape=IMAGE_SHAPE,
                                         dilate_iters=DILATE_ITERS)
-
+    changeIDList_all = copy.deepcopy(changeIDList)
     # Si x->y puis y->x il ne faut pas garder le deuxieme puisque on veut changer tous les y en x dans le reste
     changeIDList_clean = []
     for idx in range(len(changeIDList)):
@@ -650,7 +654,7 @@ def findMerge(dataFolder, extension, score_thres=0.7, OVERLAP_THRESH=0.1,
     #TODO il faut faire pareil pour les merges
       
     # Export des résultats finaux
-    exportData(fusionDict, changeIDList_clean, dataFolder)
+    exportData(fusionDict, changeIDList_clean, changeIDList_all, dataFolder)
     
     return fusionDict, changeIDList_clean
 
