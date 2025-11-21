@@ -53,6 +53,7 @@ for track_id in sorted(df_score['track_id'].unique()):
     isDetached = False
     nameBubble = str(track_id)
     missing_frame = 0
+    last_attach_frame = None
     
     track_data = df_score[df_score['track_id'] == track_id].sort_values('frame')
     
@@ -69,6 +70,7 @@ for track_id in sorted(df_score['track_id'].unique()):
     else:
         attach_start_frame = track_data.loc[track_data["class_id"] == ATTACHED, "frame"].iloc[0]
         last_seen_frame = track_data["frame"].iloc[-1]
+        last_attach_frame = attach_start_frame
         
         idx_frame = attach_start_frame
         score = df_score[(df_score["frame"] == idx_frame) & (df_score["track_id"] == track_id)]["score"].iloc[0]
@@ -79,7 +81,7 @@ for track_id in sorted(df_score['track_id'].unique()):
                 # on regarde si la bulle est un parent a cette frame (donc est ce qu'elle merge?)
                 track_id = df_fusion.loc[mask, "child"].iat[0]
                 # La nouvelle bulle a track est child
-                nameBubble += "->" + str(track_id)
+                nameBubble += "=>" + str(track_id)
                 last_seen_frame = df_score.loc[df_score["track_id"] == track_id, "frame"].max()
 
             mask = (changeID_df["frame"] == idx_frame) & ((changeID_df["old_id"] == track_id))
@@ -100,9 +102,13 @@ for track_id in sorted(df_score['track_id'].unique()):
                 score += subset["score"].iloc[0]
                 if subset["class_id"].iloc[0]  == DETACHED:
                     detach_frame = idx_frame
+                    note = "DETACH"
                     isDetached = True
-                    # TODO renforcer la detection
+                    # TODO que se passe t'il si elle est detach apres avoir disparue du track apres un certain temps
+                    # TODO renforcer la detection 
                     break
+                elif subset["class_id"].iloc[0]  == ATTACHED:
+                    last_attach_frame = idx_frame
             else:
                 raise ValueError("Plusieurs valeurs trouvées")
 
@@ -117,7 +123,7 @@ for track_id in sorted(df_score['track_id'].unique()):
                         # on regarde si la bulle est un parent a cette frame (donc est ce qu'elle merge?)
                         track_id = df_fusion.loc[mask, "child"].iat[0]
                         # La nouvelle bulle a track est child
-                        nameBubble += "->" + str(track_id)
+                        nameBubble += "=>" + str(track_id)
                         last_seen_frame = df_score.loc[df_score["track_id"] == track_id, "frame"].max()
                         
                 if idx_frame > last_seen_frame:
@@ -145,6 +151,7 @@ for track_id in sorted(df_score['track_id'].unique()):
     results.append({
         "bubble_id": nameBubble,
         "attach_start_frame": attach_start_frame,
+        "last_attach_frame": last_attach_frame,
         "detach_frame": detach_frame,
         "dwell_frames": dwell_frames,
         "dwell_seconds": dwell_frames/fps, #TODO
@@ -159,9 +166,50 @@ for track_id in sorted(df_score['track_id'].unique()):
 
 results = pd.DataFrame(results).astype({
     "attach_start_frame": "Int64",
+    "last_attach_frame": "Int64",
     "detach_frame": "Int64",
     "dwell_frames": "Int64",
 })
+
+# On retire les lignes qui sont une partie des autres
+import pandas as pd
+import re
+
+def parse_tokens(series: pd.Series) -> pd.Series:
+    # Découpe chaque bubble_id en liste de nombres
+    return series.astype(str).apply(lambda s: [int(tok) for tok in re.split(r'<->|=>', s)])
+
+def clean_bubble_ids(df: pd.DataFrame, group_col="detach_frame", id_col="bubble_id") -> pd.DataFrame:
+    df = df.copy()
+    df["_tokens"] = parse_tokens(df[id_col])
+    df["_len"] = df["_tokens"].apply(len)
+
+    def filter_group(group: pd.DataFrame) -> pd.DataFrame:
+        # Trie par longueur décroissante
+        group = group.sort_values("_len", ascending=False)
+        keep = []
+        mask = []
+        for tok in group["_tokens"]:
+            # Vérifie si tok est suffixe de l’un des déjà gardés
+            if any(kt[-len(tok):] == tok for kt in keep):
+                mask.append(False)
+            else:
+                keep.append(tok)
+                mask.append(True)
+        return group[mask]
+
+    try:
+        result = df.groupby(group_col, dropna=False, group_keys=False).apply(filter_group)
+    except TypeError:
+        # fallback si dropna=False n’est pas supporté
+        sentinel = "__MISSING__"
+        df[group_col] = df[group_col].astype(object).where(df[group_col].notna(), sentinel)
+        result = df.groupby(group_col, group_keys=False).apply(filter_group)
+        result[group_col] = result[group_col].replace(sentinel, pd.NA)
+
+    return result.drop(columns=["_tokens", "_len"])
+
+results = clean_bubble_ids(results)
 
 # Sauvegarder les résultats
 out_csv = os.path.join(savefolder, f'dwell6_{extension}.csv')
