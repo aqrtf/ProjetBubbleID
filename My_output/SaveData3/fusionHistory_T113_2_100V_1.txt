@@ -1,0 +1,542 @@
+PARAMETERS:
+	DILATE_ITERS = 1
+	OVERLAP_THRESH = 0.1
+	POST_FUSION_FRAMES = 2
+	N_FRAMES_PREVIOUS_DISAPPEAR = 3
+	N_FRAMES_POST_DISAPPEAR = 2
+	score_thres = 0.7
+	MAX_OVERLAP_PARENTS = 0.7
+
+##########################################################
+Frame 3:
+	1 new bubbles: [7]
+	Bubbles disappear btw frame 0 and 5:
+		Frame 2: [2, 4]
+Frame 4:
+	1 new bubbles: [2]
+	Bubbles disappear btw frame 1 and 6:
+		Frame 2: [2, 4]
+Frame 5:
+	1 new bubbles: [9]
+	Bubbles disappear btw frame 2 and 7:
+		Frame 2: [2, 4]
+			Found parent: 4 (frame 2) -> 9, ratio: 0.670
+		Frame 7: [2, 5, 6]
+Frame 7:
+	1 new bubbles: [4]
+	Bubbles disappear btw frame 4 and 9:
+		Frame 7: [2, 5, 6]
+		Frame 9: [6]
+Frame 8:
+	3 new bubbles: [2, 5, 6]
+	Bubbles disappear btw frame 5 and 10:
+		Frame 7: [2, 5, 6]
+		Frame 9: [6]
+		Frame 10: [4]
+		Frame 7: [2, 5, 6]
+		Frame 9: [6]
+		Frame 10: [4]
+		Frame 7: [2, 5, 6]
+		Frame 9: [6]
+		Frame 10: [4]
+Frame 10:
+	1 new bubbles: [11]
+	Bubbles disappear btw frame 7 and 12:
+		Frame 7: [2, 5, 6]
+			Found parent: 6 (frame 7) -> 11, ratio: 0.483
+		Frame 9: [6]
+			Found parent: 6 (frame 9) -> 11, ratio: 0.531
+		Frame 10: [4]
+		Frame 11: [7]
+			Found parent: 7 (frame 11) -> 11, ratio: 0.342
+Frame 11:
+	1 new bubbles: [4]
+	Bubbles disappear btw frame 8 and 13:
+		Frame 9: [6]
+		Frame 10: [4]
+		Frame 11: [7]
+Frame 15:
+	2 new bubbles: [8, 12]
+	Bubbles disappear btw frame 12 and 17:
+		Frame 14: [4]
+		Frame 16: [3]
+		Frame 17: [8]
+		Frame 14: [4]
+		Frame 16: [3]
+		Frame 17: [8]
+Frame 21:
+	1 new bubbles: [7]
+	Bubbles disappear btw frame 18 and 23:
+		Frame 20: [12]
+		Frame 21: [9, 11]
+		Frame 22: [7]
+Frame 22:
+	1 new bubbles: [11]
+	Bubbles disappear btw frame 19 and 24:
+		Frame 20: [12]
+		Frame 21: [9, 11]
+		Frame 22: [7]
+			Found parent: 7 (frame 22) -> 11, ratio: 0.940
+Frame 25:
+	2 new bubbles: [9, 7]
+	Bubbles disappear btw frame 22 and 27:
+		Frame 22: [7]
+		Frame 25: [11]
+		Frame 26: [5, 7]
+		Frame 22: [7]
+		Frame 25: [11]
+			Found parent: 11 (frame 25) -> 7, ratio: 0.983
+		Frame 26: [5, 7]
+Frame 26:
+	1 new bubbles: [11]
+	Bubbles disappear btw frame 23 and 28:
+		Frame 25: [11]
+		Frame 26: [5, 7]
+			Found parent: 7 (frame 26) -> 11, ratio: 0.943
+		Frame 28: [8]
+Frame 27:
+	1 new bubbles: [8]
+	Bubbles disappear btw frame 24 and 29:
+		Frame 25: [11]
+		Frame 26: [5, 7]
+		Frame 28: [8]
+Frame 28:
+	1 new bubbles: [5]
+	Bubbles disappear btw frame 25 and 30:
+		Frame 25: [11]
+		Frame 26: [5, 7]
+		Frame 28: [8]
+			Found parent: 8 (frame 28) -> 5, ratio: 0.121
+		Frame 30: [11]
+Frame 29:
+	2 new bubbles: [16, 15]
+	Bubbles disappear btw frame 26 and 31:
+		Frame 26: [5, 7]
+		Frame 28: [8]
+		Frame 30: [11]
+		Frame 31: [16, 5]
+		Frame 26: [5, 7]
+		Frame 28: [8]
+		Frame 30: [11]
+		Frame 31: [16, 5]
+Frame 31:
+	1 new bubbles: [4]
+	Bubbles disappear btw frame 28 and 33:
+		Frame 28: [8]
+		Frame 30: [11]
+		Frame 31: [16, 5]
+		Frame 33: [4]
+Frame 32:
+	1 new bubbles: [11]
+	Bubbles disappear btw frame 29 and 34:
+		Frame 30: [11]
+		Frame 31: [16, 5]
+		Frame 33: [4]
+		Frame 34: [11]
+Frame 34:
+	2 new bubbles: [4, 7]
+	Bubbles disappear btw frame 31 and 36:
+		Frame 31: [16, 5]
+		Frame 33: [4]
+		Frame 34: [11]
+		Frame 36: [17]
+		Frame 31: [16, 5]
+		Frame 33: [4]
+		Frame 34: [11]
+			Found parent: 11 (frame 34) -> 7, ratio: 0.946
+		Frame 36: [17]
+Frame 35:
+	1 new bubbles: [17]
+	Bubbles disappear btw frame 32 and 37:
+		Frame 33: [4]
+		Frame 34: [11]
+		Frame 36: [17]
+		Frame 37: [9, 7]
+Frame 38:
+	1 new bubbles: [11]
+	Bubbles disappear btw frame 35 and 40:
+		Frame 36: [17]
+		Frame 37: [9, 7]
+			Found parent: 7 (frame 37) -> 11, ratio: 0.784
+		Frame 38: [15]
+			Found parent: 15 (frame 38) -> 11, ratio: 0.104
+		Frame 39: [4]
+		Frame 40: [11]
+Frame 39:
+	2 new bubbles: [18, 5]
+	Bubbles disappear btw frame 36 and 41:
+		Frame 36: [17]
+		Frame 37: [9, 7]
+		Frame 38: [15]
+		Frame 39: [4]
+		Frame 40: [11]
+		Frame 41: [19, 5]
+		Frame 36: [17]
+		Frame 37: [9, 7]
+		Frame 38: [15]
+		Frame 39: [4]
+			Found parent: 4 (frame 39) -> 5, ratio: 0.871
+		Frame 40: [11]
+		Frame 41: [19, 5]
+Frame 40:
+	1 new bubbles: [19]
+	Bubbles disappear btw frame 37 and 42:
+		Frame 37: [9, 7]
+		Frame 38: [15]
+		Frame 39: [4]
+		Frame 40: [11]
+		Frame 41: [19, 5]
+		Frame 42: [2, 11]
+Frame 41:
+	2 new bubbles: [11, 4]
+	Bubbles disappear btw frame 38 and 43:
+		Frame 38: [15]
+		Frame 39: [4]
+		Frame 40: [11]
+		Frame 41: [19, 5]
+		Frame 42: [2, 11]
+		Frame 43: [8, 20]
+		Frame 38: [15]
+		Frame 39: [4]
+		Frame 40: [11]
+		Frame 41: [19, 5]
+			Found parent: 5 (frame 41) -> 4, ratio: 0.954
+		Frame 42: [2, 11]
+		Frame 43: [8, 20]
+Frame 42:
+	2 new bubbles: [8, 20]
+	Bubbles disappear btw frame 39 and 44:
+		Frame 39: [4]
+		Frame 40: [11]
+		Frame 41: [19, 5]
+		Frame 42: [2, 11]
+		Frame 43: [8, 20]
+		Frame 39: [4]
+		Frame 40: [11]
+		Frame 41: [19, 5]
+		Frame 42: [2, 11]
+		Frame 43: [8, 20]
+Frame 43:
+	1 new bubbles: [7]
+	Bubbles disappear btw frame 40 and 45:
+		Frame 40: [11]
+			Found parent: 11 (frame 40) -> 7, ratio: 0.887
+		Frame 41: [19, 5]
+		Frame 42: [2, 11]
+			Found parent: 11 (frame 42) -> 7, ratio: 0.882
+		Frame 43: [8, 20]
+		Frame 45: [7]
+Frame 44:
+	1 new bubbles: [21]
+	Bubbles disappear btw frame 41 and 46:
+		Frame 41: [19, 5]
+		Frame 42: [2, 11]
+		Frame 43: [8, 20]
+		Frame 45: [7]
+		Frame 46: [16, 11]
+Frame 45:
+	3 new bubbles: [16, 9, 11]
+	Bubbles disappear btw frame 42 and 47:
+		Frame 42: [2, 11]
+		Frame 43: [8, 20]
+		Frame 45: [7]
+		Frame 46: [16, 11]
+		Frame 42: [2, 11]
+		Frame 43: [8, 20]
+		Frame 45: [7]
+		Frame 46: [16, 11]
+		Frame 42: [2, 11]
+		Frame 43: [8, 20]
+		Frame 45: [7]
+		Frame 46: [16, 11]
+Frame 46:
+	1 new bubbles: [7]
+	Bubbles disappear btw frame 43 and 48:
+		Frame 43: [8, 20]
+		Frame 45: [7]
+		Frame 46: [16, 11]
+			Found parent: 11 (frame 46) -> 7, ratio: 0.921
+		Frame 48: [16]
+Frame 47:
+	1 new bubbles: [16]
+	Bubbles disappear btw frame 44 and 49:
+		Frame 45: [7]
+		Frame 46: [16, 11]
+		Frame 48: [16]
+Frame 48:
+	1 new bubbles: [11]
+	Bubbles disappear btw frame 45 and 50:
+		Frame 45: [7]
+		Frame 46: [16, 11]
+		Frame 48: [16]
+		Frame 50: [7]
+			Found parent: 7 (frame 50) -> 11, ratio: 0.941
+Frame 51:
+	2 new bubbles: [5, 22]
+	Bubbles disappear btw frame 48 and 53:
+		Frame 48: [16]
+		Frame 50: [7]
+		Frame 52: [22]
+		Frame 53: [0, 11, 4]
+			Found parent: 0 (frame 53) -> 5, ratio: 0.291
+			Found parent: 4 (frame 53) -> 5, ratio: 0.675
+		Frame 48: [16]
+		Frame 50: [7]
+		Frame 52: [22]
+		Frame 53: [0, 11, 4]
+Frame 53:
+	2 new bubbles: [22, 23]
+	Bubbles disappear btw frame 50 and 55:
+		Frame 50: [7]
+		Frame 52: [22]
+		Frame 53: [0, 11, 4]
+		Frame 54: [23]
+		Frame 55: [9, 22]
+		Frame 50: [7]
+		Frame 52: [22]
+		Frame 53: [0, 11, 4]
+		Frame 54: [23]
+		Frame 55: [9, 22]
+Frame 55:
+	1 new bubbles: [11]
+	Bubbles disappear btw frame 52 and 57:
+		Frame 52: [22]
+		Frame 53: [0, 11, 4]
+		Frame 54: [23]
+		Frame 55: [9, 22]
+		Frame 57: [9, 11, 22]
+Frame 56:
+	2 new bubbles: [9, 22]
+	Bubbles disappear btw frame 53 and 58:
+		Frame 53: [0, 11, 4]
+		Frame 54: [23]
+		Frame 55: [9, 22]
+		Frame 57: [9, 11, 22]
+		Frame 53: [0, 11, 4]
+		Frame 54: [23]
+		Frame 55: [9, 22]
+		Frame 57: [9, 11, 22]
+Frame 59:
+	1 new bubbles: [25]
+	Bubbles disappear btw frame 56 and 61:
+		Frame 57: [9, 11, 22]
+Frame 60:
+	1 new bubbles: [26]
+	Bubbles disappear btw frame 57 and 62:
+		Frame 57: [9, 11, 22]
+		Frame 62: [26]
+Frame 62:
+	1 new bubbles: [27]
+	Bubbles disappear btw frame 59 and 64:
+		Frame 62: [26]
+		Frame 64: [27]
+Frame 63:
+	1 new bubbles: [26]
+	Bubbles disappear btw frame 60 and 65:
+		Frame 62: [26]
+		Frame 64: [27]
+Frame 64:
+	1 new bubbles: [16]
+	Bubbles disappear btw frame 61 and 66:
+		Frame 62: [26]
+		Frame 64: [27]
+		Frame 66: [26]
+Frame 66:
+	2 new bubbles: [29, 22]
+	Bubbles disappear btw frame 63 and 68:
+		Frame 64: [27]
+		Frame 66: [26]
+		Frame 67: [16]
+		Frame 64: [27]
+		Frame 66: [26]
+		Frame 67: [16]
+Frame 67:
+	1 new bubbles: [26]
+	Bubbles disappear btw frame 64 and 69:
+		Frame 64: [27]
+		Frame 66: [26]
+		Frame 67: [16]
+		Frame 69: [22]
+Frame 72:
+	1 new bubbles: [31]
+	Bubbles disappear btw frame 69 and 74:
+		Frame 69: [22]
+		Frame 73: [25, 26]
+			Found parent: 25 (frame 73) -> 31, ratio: 0.500
+			Found parent: 26 (frame 73) -> 31, ratio: 0.373
+		Frame 74: [29]
+Frame 75:
+	1 new bubbles: [34]
+	Bubbles disappear btw frame 72 and 77:
+		Frame 73: [25, 26]
+		Frame 74: [29]
+		Frame 76: [21]
+		Frame 77: [1, 34, 35]
+Frame 76:
+	2 new bubbles: [33, 35]
+	Bubbles disappear btw frame 73 and 78:
+		Frame 73: [25, 26]
+		Frame 74: [29]
+		Frame 76: [21]
+		Frame 77: [1, 34, 35]
+		Frame 78: [33]
+		Frame 73: [25, 26]
+		Frame 74: [29]
+		Frame 76: [21]
+		Frame 77: [1, 34, 35]
+		Frame 78: [33]
+Frame 77:
+	1 new bubbles: [21]
+	Bubbles disappear btw frame 74 and 79:
+		Frame 74: [29]
+		Frame 76: [21]
+		Frame 77: [1, 34, 35]
+			Found parent: 34 (frame 77) -> 21, ratio: 0.179
+			Found parent: 35 (frame 77) -> 21, ratio: 0.620
+		Frame 78: [33]
+Frame 82:
+	3 new bubbles: [18, 29, 31]
+	Bubbles disappear btw frame 79 and 84:
+		Frame 81: [18, 31]
+		Frame 83: [18]
+		Frame 81: [18, 31]
+		Frame 83: [18]
+		Frame 81: [18, 31]
+		Frame 83: [18]
+Frame 84:
+	2 new bubbles: [34, 18]
+	Bubbles disappear btw frame 81 and 86:
+		Frame 81: [18, 31]
+		Frame 83: [18]
+		Frame 86: [18, 36]
+		Frame 81: [18, 31]
+		Frame 83: [18]
+		Frame 86: [18, 36]
+Frame 85:
+	1 new bubbles: [36]
+	Bubbles disappear btw frame 82 and 87:
+		Frame 83: [18]
+		Frame 86: [18, 36]
+		Frame 87: [30]
+Frame 86:
+	1 new bubbles: [30]
+	Bubbles disappear btw frame 83 and 88:
+		Frame 83: [18]
+			Found parent: 18 (frame 83) -> 30, ratio: 0.878
+		Frame 86: [18, 36]
+			Found parent: 18 (frame 86) -> 30, ratio: 0.944
+		Frame 87: [30]
+		Frame 88: [18, 21]
+			Found parent: 18 (frame 88) -> 30, ratio: 0.891
+Frame 87:
+	1 new bubbles: [18]
+	Bubbles disappear btw frame 84 and 89:
+		Frame 86: [18, 36]
+		Frame 87: [30]
+		Frame 88: [18, 21]
+		Frame 89: [30]
+			Found parent: 30 (frame 89) -> 18, ratio: 0.460
+Frame 88:
+	1 new bubbles: [30]
+	Bubbles disappear btw frame 85 and 90:
+		Frame 86: [18, 36]
+		Frame 87: [30]
+		Frame 88: [18, 21]
+		Frame 89: [30]
+		Frame 90: [35]
+Frame 89:
+	2 new bubbles: [35, 38]
+	Bubbles disappear btw frame 86 and 91:
+		Frame 86: [18, 36]
+		Frame 87: [30]
+		Frame 88: [18, 21]
+		Frame 89: [30]
+		Frame 90: [35]
+		Frame 91: [38]
+		Frame 86: [18, 36]
+		Frame 87: [30]
+		Frame 88: [18, 21]
+		Frame 89: [30]
+		Frame 90: [35]
+		Frame 91: [38]
+Frame 91:
+	1 new bubbles: [21]
+	Bubbles disappear btw frame 88 and 93:
+		Frame 88: [18, 21]
+		Frame 89: [30]
+		Frame 90: [35]
+			Found parent: 35 (frame 90) -> 21, ratio: 0.642
+		Frame 91: [38]
+		Frame 92: [21]
+		Frame 93: [34]
+Frame 93:
+	1 new bubbles: [35]
+	Bubbles disappear btw frame 90 and 95:
+		Frame 90: [35]
+		Frame 91: [38]
+		Frame 92: [21]
+			Found parent: 21 (frame 92) -> 35, ratio: 0.820
+		Frame 93: [34]
+		Frame 94: [35]
+Frame 94:
+	1 new bubbles: [34]
+	Bubbles disappear btw frame 91 and 96:
+		Frame 91: [38]
+		Frame 92: [21]
+			Found parent: 21 (frame 92) -> 34, ratio: 0.342
+		Frame 93: [34]
+		Frame 94: [35]
+			Found parent: 35 (frame 94) -> 34, ratio: 0.405
+Frame 96:
+	1 new bubbles: [38]
+	Bubbles disappear btw frame 93 and 98:
+		Frame 93: [34]
+		Frame 94: [35]
+		Frame 98: [38]
+Frame 98:
+	1 new bubbles: [18]
+	Bubbles disappear btw frame 95 and 100:
+		Frame 98: [38]
+		Frame 99: [18, 31]
+Frame 99:
+	1 new bubbles: [39]
+	Bubbles disappear btw frame 96 and 101:
+		Frame 98: [38]
+		Frame 99: [18, 31]
+Frame 100:
+	1 new bubbles: [18]
+	Bubbles disappear btw frame 97 and 102:
+		Frame 98: [38]
+		Frame 99: [18, 31]
+##########################################################
+Results before cleaning:
+	Frame   5:   9 <- [1]
+	Frame  10:  11 <- [6, 8, 10]
+	Frame  22:  11 <- [21]
+	Frame  25:   7 <- [24]
+	Frame  26:  11 <- [25]
+	Frame  28:   5 <- [27]
+	Frame  34:   7 <- [33]
+	Frame  38:  11 <- [36, 37]
+	Frame  39:   5 <- [38]
+	Frame  41:   4 <- [40]
+	Frame  43:   7 <- [39, 41]
+	Frame  46:   7 <- [45]
+	Frame  48:  11 <- [49]
+	Frame  51:   5 <- [52, 52]
+	Frame  72:  31 <- [72, 72]
+	Frame  77:  21 <- [76, 76]
+	Frame  86:  30 <- [82, 85, 87]
+	Frame  87:  18 <- [88]
+	Frame  91:  21 <- [89]
+	Frame  93:  35 <- [91]
+	Frame  94:  34 <- [91, 93]
+##########################################################
+Cleaning:
+##########################################################
+Results:
+	Frame  10:  11 <- [6, 7]
+	Frame  38:  11 <- [7, 15]
+	Frame  51:   5 <- [0, 4]
+	Frame  72:  31 <- [25, 26]
+	Frame  77:  21 <- [34, 35]

@@ -2,11 +2,15 @@ MODELS/**
 training/DATASETS/** 
 training/help/** 
 training/output/** 
-My_output/** 
+My_output/SaveData/**
+My_output/SaveData2/**
+My_output/T113_2_75V2/**
+My_output/Test3/**
+My_output/test50_frames/**
 *.mp4
 *.pth
-*.avi
-
+*.png
+*.jpg
 # Dont ignore this
 !My_output/Test6
 !My_output/Test6/*

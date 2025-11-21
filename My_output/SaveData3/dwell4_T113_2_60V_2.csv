@@ -1,0 +1,141 @@
+bubble_id,attach_start_frame,detach_frame,dwell_frames,dwell_seconds,n_frames_tracked,n_unknown,missing_detection,mean_score_pct,child_id,detachs?,note
+-1,,,,,1,0,0.0,,,False,no_attached_run
+0,,,,,55,0,0.0,,,False,no_attached_run
+1,,,,,226,0,0.0,,,False,no_attached_run
+2,,,,,86,0,0.0,,,False,no_attached_run
+3,,,,,130,0,1.0,,,False,no_attached_run
+4,,,,,141,0,1.0,,,False,no_attached_run
+5,,,,,9,0,0.0,,,False,no_attached_run
+6,1,24,23,0.00575,22,0,0.0,0.9554417295889421,19,False,/PARENT/CHILD=19
+7,,,,,208,0,3.0,,,False,no_attached_run
+8,1,,,,341,0,9.0,0.969963176683946,,False,come from a merge//PARENTWarning more than 1 merge for this bubble
+9,,,,,121,0,1.0,,,False,no_attached_run
+10,1,6,5,0.00125,6,0,0.0,0.9155235886573792,15,False,/PARENT/CHILD=15
+11,1,,,,8,0,13.0,0.8386652544140816,,False,disappear after frame21
+12,,,,,40,31,41.0,,,False,no_attached_run
+13,,,,,5,0,0.0,,,False,no_attached_run
+14,,,,,1,1,0.0,,,False,no_attached_run
+15,6,12,6,0.0015,332,0,4.0,0.8727558595793588,,True,come from a merge/WARNING the bubble reattached after/DETACHED
+16,,,,,14,14,8.0,,,False,no_attached_run
+17,5,12,7,0.00175,245,0,9.0,0.7725651264190674,,True,/DETACHED
+18,,,,,1,1,0.0,,,False,no_attached_run
+19,24,,,,401,1,-67.0,0.9500462053125339,,False,come from a merge//PARENTWarning more than 1 merge for this bubble
+20,,,,,200,0,23.0,,,False,no_attached_run
+21,,,,,1,1,0.0,,,False,no_attached_run
+22,13,,,,20,0,0.0,0.8849914878606796,,False,disappear after frame32
+25,16,21,5,0.00125,5,0,0.0,0.9596477270126342,8,False,/PARENT/CHILD=8
+29,26,,,,13,0,0.0,0.9140388415409968,,False,disappear after frame38
+30,32,49,17,0.00425,17,0,8.0,0.9341662781579154,19,False,/PARENT/CHILD=19
+31,,,,,4,0,14.0,,,False,no_attached_run
+32,,,,,1,0,0.0,,,False,no_attached_run
+33,41,102,61,0.01525,341,1,9.0,0.9384923304541636,,True,WARNING the bubble reattached after/DETACHED
+35,48,85,37,0.00925,37,0,0.0,0.9526249009209711,43,False,/PARENTWarning more than 1 merge for this bubble/CHILD=43
+39,59,,,,412,24,-91.0,0.9225368151097622,,False,come from a merge//PARENTWarning more than 1 merge for this bubble
+43,85,,,,4,0,0.0,0.8428686410188675,,False,come from a merge//PARENT
+44,,,,,1,1,0.0,,,False,no_attached_run
+46,88,,,,3,0,0.0,0.8728092511494955,,False,disappear after frame90
+47,,,,,4,0,8.0,,,False,no_attached_run
+48,94,,,,193,0,31.0,0.9415347247074047,,False,come from a merge//PARENTWarning more than 1 merge for this bubble
+49,92,,,,2,0,11.0,0.7720772922039032,,False,disappear after frame104
+52,99,,,,19,0,0.0,0.8997829744690343,,False,disappear after frame117
+54,,,,,1,1,0.0,,,False,no_attached_run
+57,,,,,13,0,8.0,,,False,no_attached_run
+58,,,,,4,0,10.0,,,False,no_attached_run
+59,117,127,10,0.0025,47,0,4.0,0.84985271692276,39,False,/PARENTWarning more than 1 merge for this bubble/CHILD=39
+62,,,,,85,0,1.0,,,False,no_attached_run
+63,,,,,6,0,7.0,,,False,no_attached_run
+64,125,136,11,0.00275,11,0,0.0,0.951426549391313,48,False,/PARENT/CHILD=48
+65,130,,,,338,0,8.0,0.9717010490640381,,False,come from a merge//PARENTWarning more than 1 merge for this bubble
+66,,,,,5,0,4.0,,,False,no_attached_run
+67,,,,,2,0,0.0,,,False,no_attached_run
+68,143,,,,12,0,0.0,0.8899048914511999,,False,disappear after frame154
+69,163,,,,1,0,0.0,0.8148950338363647,,False,disappear after frame163
+70,,,,,2,0,0.0,,,False,no_attached_run
+72,160,206,46,0.0115,46,0,0.0,0.958465603382691,48,False,/PARENTWarning more than 1 merge for this bubble/CHILD=48
+73,168,209,41,0.01025,41,0,0.0,0.9216218925103908,84,False,/PARENT/CHILD=84
+74,,,,,1,0,0.0,,,False,no_attached_run
+76,,,,,1,0,0.0,,,False,no_attached_run
+77,177,190,13,0.00325,8,0,5.0,0.9481363371014595,65,False,/PARENT/CHILD=65
+82,196,209,13,0.00325,36,0,17.0,0.9603840617033151,84,False,/PARENT/CHILD=84
+84,209,221,12,0.003,251,2,21.0,0.9423330227533976,,True,come from a merge/WARNING the bubble reattached after/DETACHED
+85,197,209,12,0.003,11,0,0.0,0.8642323396422646,65,False,/PARENT/CHILD=65
+89,,,,,1,0,0.0,,,False,no_attached_run
+90,,,,,74,0,0.0,,,False,no_attached_run
+91,208,,,,3,0,0.0,0.8884554107983907,,False,disappear after frame210
+92,,,,,22,0,11.0,,,False,no_attached_run
+93,215,,,,255,0,6.0,0.969447497994292,,False,come from a merge//PARENT
+94,213,244,31,0.00775,30,0,0.0,0.9212925652662913,101,False,/PARENTWarning more than 1 merge for this bubble/CHILD=101
+95,,,,,1,1,0.0,,,False,no_attached_run
+99,235,,,,1,0,0.0,0.7203333377838135,,False,disappear after frame235
+101,244,246,2,0.0005,2,0,0.0,0.8292230367660522,65,False,come from a merge//PARENT/CHILD=65
+102,249,277,28,0.007,20,0,7.0,0.9216336220502853,93,False,/PARENT/CHILD=93
+103,249,,,,220,0,7.0,0.952645467357202,,False,come from a merge//PARENTWarning more than 1 merge for this bubble
+106,,,,,17,0,2.0,,,False,no_attached_run
+108,253,,,,202,12,-74.0,0.913036709669793,,False,come from a merge//PARENTWarning more than 1 merge for this bubble
+112,285,,,,182,0,9.0,0.9416705150525648,,False,come from a merge//PARENTWarning more than 1 merge for this bubble
+113,,,,,174,19,9.0,,,False,no_attached_run
+116,,,,,62,0,6.0,,,False,no_attached_run
+117,300,306,6,0.0015,6,0,0.0,0.9071063896020254,103,False,/PARENT/CHILD=103
+119,,,,,1,0,0.0,,,False,no_attached_run
+121,311,320,9,0.00225,9,0,0.0,0.866107788350847,103,False,/PARENT/CHILD=103
+122,,,,,1,0,0.0,,,False,no_attached_run
+126,,,,,1,1,0.0,,,False,no_attached_run
+127,328,,,,17,0,0.0,0.9130943662980023,,False,disappear after frame344
+128,331,333,2,0.0005,15,0,14.0,0.9008051951726278,112,False,/PARENTWarning more than 1 merge for this bubble/CHILD=112
+132,382,,,,221,43,-95.0,0.9376429955369419,,False,come from a merge//PARENTWarning more than 1 merge for this bubble
+133,,,,,17,0,11.0,,,False,no_attached_run
+135,353,373,20,0.005,20,0,15.0,0.9329532601616599,137,False,/PARENTWarning more than 1 merge for this bubble/CHILD=137
+137,373,375,2,0.0005,3,0,1.0,0.8934637308120728,108,False,come from a merge//PARENTWarning more than 1 merge for this bubble/CHILD=108
+138,350,,,,2,0,0.0,0.821306586265564,,False,disappear after frame351
+140,352,,,,60,0,1.0,0.9190625697374344,,False,/PARENT
+141,,,,,3,3,7.0,,,False,no_attached_run
+143,364,385,21,0.00525,19,0,0.0,0.9279175337992216,148,False,/PARENT/CHILD=148
+144,,,,,91,0,1.0,,,False,no_attached_run
+148,385,,,,2,0,0.0,0.9039525091648102,,False,come from a merge/disappear after frame386
+149,389,,,,54,0,2.0,0.9351964681236832,,False,/PARENT
+150,,,,,1,1,0.0,,,False,no_attached_run
+152,397,,,,66,38,13.0,0.9074646649938641,,False,attach until end
+153,398,,,,3,0,3.0,0.8886426091194153,,False,disappear after frame403
+154,404,413,9,0.00225,10,0,0.0,0.9499253094196319,155,False,/PARENT/CHILD=155
+155,413,,,,64,0,-1.0,0.8926632693037391,,False,come from a merge//PARENT
+157,,,,,1,1,0.0,,,False,no_attached_run
+158,421,469,48,0.012,52,6,3.0,0.9485012901326021,,True,/DETACHED
+159,427,,,,3,0,0.0,0.9005614717801412,,False,disappear after frame429
+160,447,448,1,0.00025,28,0,1.0,0.7528943717479706,,True,come from a merge/WARNING the bubble reattached after/DETACHED
+161,,,,,6,0,4.0,,,False,no_attached_run
+162,435,447,12,0.003,10,0,0.0,0.9182435035705566,160,False,/PARENT/CHILD=160
+163,437,446,9,0.00225,10,0,1.0,0.8893859386444092,155,False,/PARENT/CHILD=155
+164,,,,,4,4,10.0,,,False,no_attached_run
+165,,,,,5,0,0.0,,,False,no_attached_run
+166,,,,,1,0,0.0,,,False,no_attached_run
+167,450,,,,26,0,0.0,0.9348760957901294,,False,attach until end
+168,450,,,,15,0,11.0,0.9220473249753316,,False,attach until end
+169,,,,,2,2,0.0,,,False,no_attached_run
+170,451,,,,12,0,0.0,0.9363296031951904,,False,disappear after frame462
+173,,,,,13,1,2.0,,,False,no_attached_run
+174,,,,,3,3,7.0,,,False,no_attached_run
+177,467,473,6,0.0015,6,0,3.0,0.7882075428962707,,True,WARNING the bubble reattached after/DETACHED
+6->19,1,,,,423,1,,0.9503268235964133,,,come from a merge//PARENTWarning more than 1 merge for this bubble
+10->15,1,12,11,0.00275,338,0,,0.8735150500363651,,,come from a merge/WARNING the bubble reattached after/DETACHED
+25->8,16,,,,346,0,,0.9698141094921642,,,come from a merge//PARENTWarning more than 1 merge for this bubble
+30->19,32,,,,418,1,,0.9494003709545709,,,come from a merge//PARENTWarning more than 1 merge for this bubble
+35->43,48,,,,41,0,,0.9419169731256438,,,come from a merge//PARENT
+59->39,117,,,,459,24,,0.9150942168204613,,,come from a merge//PARENTWarning more than 1 merge for this bubble
+64->48,125,,,,204,0,,0.9420681074109488,,,come from a merge//PARENTWarning more than 1 merge for this bubble
+72->48,160,,,,239,0,,0.9447933875486733,,,come from a merge//PARENTWarning more than 1 merge for this bubble
+73->84,168,221,53,0.013250000000000001,292,2,,0.9394249530959891,,,come from a merge/WARNING the bubble reattached after/DETACHED
+77->65,177,,,,346,0,,0.9711562002325334,,,come from a merge//PARENTWarning more than 1 merge for this bubble
+82->84,196,221,25,0.00625,287,2,,0.9445972645728994,,,come from a merge/WARNING the bubble reattached after/DETACHED
+85->65,197,,,,349,0,,0.9683137831510309,,,come from a merge//PARENTWarning more than 1 merge for this bubble
+94->101->65,213,,,,32,0,,0.9155382197350264,65,,come from a merge//PARENT/CHILD=65
+101->65,244,,,,340,0,,0.9708629431093441,,,come from a merge//PARENTWarning more than 1 merge for this bubble
+102->93,249,,,,275,0,,0.9659701251983642,,,come from a merge//PARENT
+117->103,300,,,,226,0,,0.9514364652929053,,,come from a merge//PARENTWarning more than 1 merge for this bubble
+121->103,311,,,,229,0,,0.9492444232041138,,,come from a merge//PARENTWarning more than 1 merge for this bubble
+128->112,331,,,,197,0,,0.9385589424728742,,,come from a merge//PARENTWarning more than 1 merge for this bubble
+135->137->108,353,,,,23,0,,0.9278024519856267,108,,come from a merge//PARENTWarning more than 1 merge for this bubble/CHILD=108
+137->108,373,,,,205,12,,0.9127502758328507,,,come from a merge//PARENTWarning more than 1 merge for this bubble
+143->148,364,,,,21,0,,0.9256351505007062,,,come from a merge/disappear after frame386
+154->155,404,,,,74,0,,0.9004013828329138,,,come from a merge//PARENT
+162->160,435,448,13,0.0032500000000000003,38,0,,0.7964073011749669,,,come from a merge/WARNING the bubble reattached after/DETACHED
+163->155,437,,,,74,0,,0.892220386782208,,,come from a merge//PARENT

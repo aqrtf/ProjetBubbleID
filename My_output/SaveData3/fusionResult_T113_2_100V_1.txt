@@ -1,0 +1,6 @@
+5 fusions detect:
+Frame  10:  11 <- [6, 7]
+Frame  38:  11 <- [7, 15]
+Frame  51:   5 <- [0, 4]
+Frame  72:  31 <- [25, 26]
+Frame  77:  21 <- [34, 35]
