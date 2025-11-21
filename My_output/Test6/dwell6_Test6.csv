@@ -5,15 +5,15 @@ bubble_id,attach_start_frame,detach_frame,dwell_frames,dwell_seconds,n_frames_tr
 3,,,,,15,0,0,,,False,no_attached_run
 4,,,,,15,0,0,,,False,no_attached_run
 5,,,,,3,0,0,,,False,no_attached_run
-6<->20,11,,,,10,0,5,,,False,
-7,1,,,,15,0,0,,,False,
-8,1,,,,15,0,0,,,False,
-9->20<->6<->20,1,,,,7,0,0,,,False,
+6<->20<->6,11,14,3,0.00075,10,0,5,0.8537350296974182,,True,
+7,1,,,,15,0,0,0.9344924887021383,,False,attach_until_end
+8,1,,,,15,0,0,0.92241903146108,,False,attach_until_end
+9->20<->6<->20<->6,1,14,13,0.00325,7,0,0,0.9001904640878949,,True,
 10,,,,,15,0,0,,,False,no_attached_run
-11,4,,,,13,0,2,,,False,
-12,1,,,,2,0,2,,,False,
+11,4,5,1,0.00025,13,0,2,0.809578150510788,,True,
+12,1,,,,2,0,2,0.09463019371032715,,False,disappear after frame 4
 16,,,,,9,0,0,,,False,no_attached_run
 17,,,,,6,0,0,,,False,no_attached_run
-18,4,,,,2,0,0,,,False,
-20<->6<->20,8,,,,5,0,1,,,False,
-23,15,,,,1,0,0,,,False,
+18,4,,,,2,0,0,0.12411194543043773,,False,disappear after frame 5
+20<->6<->20<->6,8,14,6,0.0015,5,0,1,0.867614209651947,,True,
+23,15,,,,1,0,0,0.8276519179344177,,False,attach_until_end

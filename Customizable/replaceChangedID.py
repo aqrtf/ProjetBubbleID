@@ -8,11 +8,11 @@ def replaceChangedID(rich_df, changeIDList):
     # df.loc[...] sélectionne les lignes selon une condition.
     # (df['frame'] > x) & (df['tid'] == y) est la condition combinée.
     # 'status' est la colonne que tu modifies (remplace par celle que tu veux).
-import parentBubble4  
+import Customizable.BubbleID_dependencies.parentBubble as parentBubble  
 dataFolder = "My_output/Test6"
 extension = "Test6"
 
-fusionDict, changeIDList = parentBubble4.findMerge(dataFolder, extension, score_thres=0.7, OVERLAP_THRESH=0.1,
+fusionDict, changeIDList = parentBubble.findMerge(dataFolder, extension, score_thres=0.7, OVERLAP_THRESH=0.1,
                                     MIN_OVERLAP_SAME=0.7, POST_FUSION_FRAMES=2, N_FRAMES_PREVIOUS_DISAPPEAR=3, 
                                     N_FRAMES_POST_DISAPPEAR=2,
                                     IMAGE_SHAPE=(1024, 1024), DILATE_ITERS=1

@@ -11,6 +11,7 @@ My_output/test50_frames/**
 *.pth
 *.png
 *.jpg
+*.zip
 # Dont ignore this
 !My_output/Test6
 !My_output/Test6/*

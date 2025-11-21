@@ -2070,8 +2070,8 @@ class DataAnalysis:
                 - self.fusionDict (dict): Dictionnaire des fusions détectées
                 - self.changeIDList (2D list): Liste des chgmt d'id avec par ligne [frame, new_id, old_id]
         """
-        import parentBubble4
-        self.fusionDict, self.changeIDList = parentBubble4.findMerge(self.savefolder, self.extension, score_thres, OVERLAP_THRESH,
+        import Customizable.BubbleID_dependencies.parentBubble as parentBubble
+        self.fusionDict, self.changeIDList = parentBubble.findMerge(self.savefolder, self.extension, score_thres, OVERLAP_THRESH,
                                     MIN_OVERLAP_SAME, POST_FUSION_FRAMES, N_FRAMES_PREVIOUS_DISAPPEAR, 
                                     N_FRAMES_POST_DISAPPEAR,
                                     IMAGE_SHAPE, DILATE_ITERS
