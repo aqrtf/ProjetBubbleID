@@ -10,182 +10,6 @@ extension="Test6"
 score_thres = 0.7
 N_FRAMES_POST_DISAPPEAR = 2
 
-
-def _replaceChangedID(rich_df, fusion_df, changeID_df):
-    """
-    Modifie le dataframe rich et le fusion_df pour prendre en compte les changements de track id
-    
-    Args:
-        rich_df (pd.DataFrame): DataFrame rich avec les colonnes ['track_id', 'frame', ...]
-        fusion_df (pd.DataFrame): DataFrame des fusions avec colonnes ['frame', 'child', 'parent1', 'parent2', ...]
-        changeID_df (pd.DataFrame): DataFrame des corrections avec colonnes ['frame', 'new_id', 'old_id']
-    
-    Returns:
-        pd.DataFrame: rich dataframe avec les track_id corrigés
-        pd.DataFrame: DataFrame fusion corrigé avec les IDs mis à jour
-    """
-    
-    # Créer des copies pour éviter les modifications des données originales
-    rich_corrige = rich_df.copy()
-    fusion_corrige = fusion_df.copy()
-    changeID_df = changeID_df.copy()
-    
-    # 1. Corriger le rich_df
-    # Trier les corrections par frame croissant pour appliquer dans l'ordre
-    changeID_sorted = changeID_df.sort_values('frame')
-    
-    for _, correction in changeID_sorted.iterrows():
-        frame_corr = correction['frame']
-        new_id = correction['new_id']
-        old_id = correction['old_id']
-        
-        # Appliquer la correction : pour toutes les frames >= frame_corr, remplacer new_id par old_id
-        mask = (rich_corrige["frame"] >= frame_corr) & (rich_corrige["track_id"] == new_id)
-        rich_corrige.loc[mask, "track_id"] = old_id
-
-
-        cols = ["child", "parent1", "parent2"] # colonne a modifier
-        mask = (fusion_corrige["frame"] >= frame_corr)
-        fusion_corrige.loc[mask, cols] = fusion_corrige.loc[mask, cols].replace(new_id, old_id)
-
-    return rich_corrige, fusion_corrige
-
-def followMerge(results):
-    # Créer une copie pour éviter les modifications sur l'original
-    results_copy = results.copy()
-    results_copy = results_copy.set_index("bubble_id")
-    
-    # Filtrer les bulles qui ont fusionné
-    merge_df = results[results["child_id"] != None]
-    new_results = []
-    
-    # Parcourir chaque bulle qui a fusionné
-    for _, mergeBb in merge_df.iterrows():
-        child_id = mergeBb["bubble_id"]
-        child = mergeBb["child_id"]
-        
-        if child is None or child not in results_copy.index:
-            continue
-            
-        mergePath = f"{child_id}->{child}"
-        first_frame = mergeBb["attach_start_frame"]
-        
-        # Calculer le dwell_frames cumulé
-        dwell_frames = mergeBb["dwell_frames"] + results_copy.at[child, "dwell_frames"]
-        
-        # Calculer le dwell_seconds cumulé
-        dwell_seconds = mergeBb["dwell_seconds"] + results_copy.at[child, "dwell_seconds"]
-        
-        # Calculer les autres métriques cumulées
-        n_frames_tracked = mergeBb["n_frames_tracked"] + results_copy.at[child, "n_frames_tracked"]
-        n_unknown = mergeBb["n_unknown"] + results_copy.at[child, "n_unknown"]
-        
-        # Calculer le score moyen pondéré
-        score1 = mergeBb["mean_score_pct"] if pd.notna(mergeBb["mean_score_pct"]) else 0
-        score2 = results_copy.at[child, "mean_score_pct"] if pd.notna(results_copy.at[child, "mean_score_pct"]) else 0
-        frames1 = mergeBb["n_frames_tracked"]
-        frames2 = results_copy.at[child, "n_frames_tracked"]
-        
-        if frames1 + frames2 > 0:
-            mean_score_pct = (score1 * frames1 + score2 * frames2) / (frames1 + frames2)
-        else:
-            mean_score_pct = np.nan
-        
-        # Vérifier si l'enfant a aussi fusionné (fusion en chaîne)
-        noteChild = results_copy.at[child, "child_id"]
-        if noteChild is not None:
-            # Récursion pour suivre la chaîne de fusions
-            child_chain = followMerge_single(child, results_copy)
-            if child_chain is not None:
-                # Mettre à jour avec les données de la chaîne complète
-                dwell_frames += child_chain["dwell_frames"] - results_copy.at[child, "dwell_frames"]
-                dwell_seconds += child_chain["dwell_seconds"] - results_copy.at[child, "dwell_seconds"]
-                final_child = child_chain["bubble_id"].split("->")[-1]
-                mergePath = f"{child_id}->{child_chain['bubble_id']}"
-                detach_frame = child_chain["detach_frame"]
-                note = child_chain["note"]
-            else:
-                detach_frame = results_copy.at[child, "detach_frame"]
-                note = results_copy.at[child, "note"]
-        else:
-            detach_frame = results_copy.at[child, "detach_frame"]
-            # note = "merged"
-        
-        # Créer le nouvel enregistrement
-        new_record = {
-            "bubble_id": mergePath,
-            "attach_start_frame": first_frame,
-            "detach_frame": detach_frame,
-            "dwell_frames": dwell_frames,
-            "dwell_seconds": dwell_seconds,
-            "n_frames_tracked": n_frames_tracked,
-            "n_unknown": n_unknown,
-            "mean_score_pct": mean_score_pct,
-            "child_id":  results_copy.at[child, "child_id"],
-            "note": note,
-        }
-        
-        new_results.append(new_record)
-    
-    # Ajouter les nouveaux résultats à la liste originale (sans les enregistrements fusionnés individuels)
-    final_results = []
-    
-    # Garder seulement les bulles qui n'ont pas fusionné (ou sont le dernier maillon d'une chaîne)
-    non_merged_results = results[results["note"] != "merged"].copy()
-    final_results.extend(non_merged_results.to_dict('records'))
-    final_results.extend(new_results)
-    
-    return pd.DataFrame(final_results)
-
-def followMerge_single(child_id, results_df):
-    """
-    Fonction helper pour suivre une chaîne de fusions pour un enfant donné
-    """
-    if child_id not in results_df.index:
-        return None
-        
-    child_data = results_df.loc[child_id]
-    
-    if child_data["child_id"] == None:
-        return None
-    
-    # Récupérer l'enfant suivant
-    next_child = child_data["child_id"]
-    
-    if next_child is None or next_child not in results_df.index:
-        return None
-    
-    # Récursivement suivre la chaîne
-    chain_result = followMerge_single(next_child, results_df)
-    
-    if chain_result:
-        # Combiner avec la chaîne existante
-        mergePath = f"{child_id}->{chain_result['bubble_id']}"
-        dwell_frames = child_data["dwell_frames"] + chain_result["dwell_frames"]
-        dwell_seconds = child_data["dwell_seconds"] + chain_result["dwell_seconds"]
-        
-        return {
-            "bubble_id": mergePath,
-            "attach_start_frame": child_data["attach_start_frame"],
-            "detach_frame": chain_result["detach_frame"],
-            "dwell_frames": dwell_frames,
-            "dwell_seconds": dwell_seconds,
-            "note": chain_result["note"]
-        }
-    else:
-        # Fin de la chaîne
-        return {
-            "bubble_id": f"{child_id}->{next_child}",
-            "attach_start_frame": child_data["attach_start_frame"],
-            "detach_frame": results_df.loc[next_child, "detach_frame"],
-            "dwell_frames": child_data["dwell_frames"] + results_df.loc[next_child, "dwell_frames"],
-            "dwell_seconds": child_data["dwell_seconds"] + results_df.loc[next_child, "dwell_seconds"],
-            "note": child_data["note"]
-        }
-
-
-
-
 # Chargement des données
 rich_path = os.path.join(savefolder, f"rich_{extension}.csv")
 if not os.path.isfile(rich_path):
@@ -247,7 +71,7 @@ for track_id in sorted(df_score['track_id'].unique()):
         last_seen_frame = track_data["frame"].iloc[-1]
         
         idx_frame = attach_start_frame
-        # for idx_frame in range(attach_start_frame+1, last_seen_frame+1+N_FRAMES_POST_DISAPPEAR):
+        score = df_score[(df_score["frame"] == idx_frame) & (df_score["track_id"] == track_id)]["score"].iloc[0]
         while(True):
             idx_frame+=1
             mask = (df_fusion["frame"] == idx_frame) & ((df_fusion["parent1"] == track_id) | (df_fusion["parent2"] == track_id))
@@ -267,13 +91,25 @@ for track_id in sorted(df_score['track_id'].unique()):
                 last_seen_frame = df_score.loc[df_score["track_id"] == track_id, "frame"].max()
 
             
-            if 
+            # Filtrer
+            subset = df_score[(df_score["frame"] == idx_frame) & (df_score["track_id"] == track_id)]
+            # Vérifier unicité
+            if subset.empty:
+                pass
+            elif len(subset) == 1:
+                score += subset["score"].iloc[0]
+                if subset["class_id"].iloc[0]  == DETACHED:
+                    detach_frame = idx_frame
+                    isDetached = True
+                    # TODO renforcer la detection
+                    break
+            else:
+                raise ValueError("Plusieurs valeurs trouvées")
 
-
-
-
-
-            if idx_frame >= last_seen_frame:
+            if idx_frame == last_frame:
+                note = "attach_until_end"
+                break
+            if idx_frame > last_seen_frame:
                 # Surplus de frame si jamais il y a un merge apres
                 for idx_supp in range(last_seen_frame, last_seen_frame+1+N_FRAMES_POST_DISAPPEAR):
                     mask = (df_fusion["frame"] == idx_supp) & ((df_fusion["parent1"] == track_id) | (df_fusion["parent2"] == track_id))
@@ -283,34 +119,28 @@ for track_id in sorted(df_score['track_id'].unique()):
                         # La nouvelle bulle a track est child
                         nameBubble += "->" + str(track_id)
                         last_seen_frame = df_score.loc[df_score["track_id"] == track_id, "frame"].max()
-                if idx_frame >= last_seen_frame:
+                        
+                if idx_frame > last_seen_frame:
+                    if attach_start_frame == last_frame:
+                        note = "attach_until_end"
+                        break
+                    note = "disappear after frame "+ str(last_seen_frame)
                     break
-
-
-            
-    
-    
-    dwell_frames = np.nan
-    # if attach_start_frame is not None and detach_frame is not None:
-    #     dwell_frames = detach_frame- attach_start_frame
-    # else:
-    #     dwell_frames = np.nan
-        
-        
-        
+   
+    if attach_start_frame is not None and detach_frame is not None:
+        dwell_frames = detach_frame- attach_start_frame
+    else:
+        dwell_frames = np.nan
+      
     # # mean score
     mean_score = None
-    # if attach_start_frame is not None:
-    #     if detach_frame is None:
-    #         end_frame = last_frame
-    #     else:
-    #         end_frame = detach_frame
-    #     attach_frames = track_data[
-    #         (track_data['frame'] >= attach_start_frame) & 
-    #         (track_data['frame'] <= end_frame)
-    #     ]['frame'].tolist()
-    #     scores = track_data[track_data['frame'].isin(attach_frames)]['score'].astype(float)
-    #     mean_score = float(scores.mean())
+    if attach_start_frame is not None:
+        if detach_frame is None:
+            end_frame = last_frame
+        else:
+            end_frame = detach_frame
+        n = end_frame-attach_start_frame+1
+        mean_score = score/n
         
     results.append({
         "bubble_id": nameBubble,
@@ -334,13 +164,6 @@ results = pd.DataFrame(results).astype({
     "child_id": "Int64",
     "dwell_frames": "Int64",
 })
-# final_results = followMerge(pd.DataFrame(results))
-# final_results = pd.DataFrame(final_results).astype({
-#     "attach_start_frame": "Int64",
-#     "detach_frame": "Int64",
-#     "child_id": "Int64",
-#     "dwell_frames": "Int64",
-# })
 
 # Sauvegarder les résultats
 out_csv = os.path.join(savefolder, f'dwell6_{extension}.csv')
