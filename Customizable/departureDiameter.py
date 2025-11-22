@@ -1,21 +1,18 @@
 from csteDef import *
-TOLERANCE_FRAME = 3
 
-def ComputeDepartureDiameter(self,
+def ComputeDepartureDiameter(savefolder, extension,
                                 *,
                                 k: int = 3,
                                 fit_kind: str = "linear",
-                                class_idx_attached: int = 2,
-                                class_idx_detached: int = 0,
-                                class_idx_unknown: int = 1,
                                 tolerate_unknown_gap: int = 1,
                                 min_attached_run: int = 1,
-                                out_csv: str | None = None):
+                                tolerance_frame = 3
+                                ):
     """
     CALCULE LE DIAMETRE DE DEPART DES BULLES
     Objectif: Determiner le diamètre des bulles au moment où elles se détachent
     """
-    import os, math, csv, ast
+    import os, math, csv, ast, json
     import numpy as np, pandas as pd
 
     # =============================================================================
@@ -23,23 +20,26 @@ def ComputeDepartureDiameter(self,
     # =============================================================================
     
     # Chemins vers les fichiers de données
-    rich_csv = os.path.join(self.savefolder, f"rich_{self.extension}.csv")          # Données enrichies des bulles
-    evolution_csv = os.path.join(self.savefolder, f"evolutionID_{self.extension}.csv") 
+    rich_csv = os.path.join(savefolder, f"rich_{extension}.csv")          # Données enrichies des bulles
+    evolution_csv = os.path.join(savefolder, f"evolutionID_{extension}.csv") 
+    scale_path = os.path.join(savefolder, f"scale_{extension}.json") 
     
     # Fichier de sortie par défaut
-    if out_csv is None:
-        out_csv = os.path.join(self.savefolder, f"departure_{self.extension}.csv")
+    out_csv = os.path.join(savefolder, f"departure_{extension}.csv")
     
     # VÉRIFICATIONS DE SÉCURITÉ: les fichiers existent-ils?
     if not os.path.isfile(rich_csv):
         raise FileNotFoundError(f"{rich_csv} non trovato.")
     if not os.path.isfile(evolution_csv):
         raise FileNotFoundError(f"{evolution_csv} non trovato.")
-    if not getattr(self, "mm_per_px", None):
-        raise RuntimeError("mm_per_px non impostato.")
+    if not os.path.isfile(scale_path):
+        raise FileNotFoundError(f"{scale_path} non trovato.")
+
 
     # Conversion pixels → millimètres
-    mm_per_px = float(self.mm_per_px)
+    with open(scale_path, "r") as f:
+        dataScale = json.load(f)
+    mm_per_px = float(dataScale["mm_per_px"])
     
     # Chargement et préparation du DataFrame principal
     df = pd.read_csv(rich_csv)
@@ -99,18 +99,18 @@ def ComputeDepartureDiameter(self,
             i = 0
             n = len(out)
             while i < n:
-                if out[i] == class_idx_attached:
+                if out[i] == ATTACHED:
                     j = i + 1
                     unk = 0
                     # Compter les 'inconnus' consécutifs
-                    while j < n and out[j] == class_idx_unknown:
+                    while j < n and out[j] == UNKNOWN:
                         unk += 1
                         j += 1
                     # Si gap acceptable et on retombe sur 'attaché'
-                    if 0 < unk <= tolerate_unknown_gap and j < n and out[j] == class_idx_attached:
+                    if 0 < unk <= tolerate_unknown_gap and j < n and out[j] == ATTACHED:
                         # Convertir les 'inconnus' en 'attachés'
                         for k2 in range(i + 1, j): 
-                            out[k2] = class_idx_attached
+                            out[k2] = ATTACHED
                         i = j
                         continue
                 i += 1
@@ -130,7 +130,7 @@ def ComputeDepartureDiameter(self,
         
         # RECHERCHE DE LA SÉQUENCE ATTACHÉE
         for i, lab in enumerate(lb_s):
-            if lab == class_idx_attached:
+            if lab == ATTACHED:
                 run += 1
                 if attach_start is None: 
                     attach_start = fr_s[i]  # Premier frame attaché
@@ -152,7 +152,7 @@ def ComputeDepartureDiameter(self,
         
         # RECHERCHE DU PREMIER FRAME DÉTACHÉ APRÈS LA SÉQUENCE ATTACHÉE
         for j in range(attach_end_i + 1, len(lb_s)):
-            if lb_s[j] == class_idx_detached:
+            if lb_s[j] == DETACHED:
                 detach_frame = fr_s[j]  # Premier frame détaché
                 break
                 
@@ -313,7 +313,7 @@ def ComputeDepartureDiameter(self,
         # Est ce qu'on voit la naissance de la bulle
         # On suppose que si on voit la bulle dans les premieres frame de la video alors elle n'est pas nouvelle
         # TODO mettre une condition sur la taille ???? 
-        if set(range(0, TOLERANCE_FRAME)) & set(frames0): # or DETACHED in labels[0:TOLERANCE_FRAME]: # pas sur de l'interet de la 2eme condition
+        if set(range(0, tolerance_frame)) & set(frames0): # or DETACHED in labels[0:TOLERANCE_FRAME]: # pas sur de l'interet de la 2eme condition
             birth = False
         else:
             birth = True
@@ -510,11 +510,10 @@ def ComputeDepartureDiameter(self,
 
 
 ################################################################################
-class Myclass:
-    savefolder = r"C:\Users\afara\Documents\EPFL\cours\MA3\Projet\ProjetBubbleID\My_output\Test6"
-    extension = "Test6"
-    mm_per_px = 0.023730276134122288
-    
-self = Myclass()
 
-ComputeDepartureDiameter(self)
+savefolder = r"C:\Users\afara\Documents\EPFL\cours\MA3\Projet\ProjetBubbleID\My_output\Test6"
+extension = "Test6"
+    
+
+
+ComputeDepartureDiameter(savefolder, extension)

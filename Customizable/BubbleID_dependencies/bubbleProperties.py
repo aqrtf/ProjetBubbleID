@@ -1,4 +1,4 @@
-import os, math, csv, ast
+import os, math, csv, ast, pickle
 import numpy as np, pandas as pd
 from csteDef import *
 MIN_ATTACH_FRAME = 4
@@ -65,13 +65,34 @@ departDiameters = np.array(departDiameters)
 growingTimes = np.array(growingTimes)
 
 departDiameterMean = np.nanmean(departDiameters) if departDiameters.size > 0 else np.nan
-growingTimesMean = np.nanmean(growingTimes) if growingTimes.size > 0 else np.nan
+departDiameterStd = np.nanstd(departDiameters) if departDiameters.size > 0 else np.nan
+growingTimeMean = np.nanmean(growingTimes) if growingTimes.size > 0 else np.nan
+growingTimeStd = np.nanstd(growingTimes) if growingTimes.size > 0 else np.nan
+
+
+
+df_evol = pd.read_csv(evolution_csv)
+tid_arr = df_evol["chemin"].apply(ast.literal_eval).to_list()
+
+
+
+
+
+
+
+
+
+
+
+
 
 results = pd.DataFrame([{
     "chip": chip,
     "tension": tension,
     "departDiameter": departDiameterMean,
-    "growingTime": growingTimesMean,
+    "departDiameter_std": departDiameterStd,
+    "growingTime": growingTimeMean,
+    "growingTime_std": growingTimeStd,
     "elevationVelocity": None, #TODO
     "growingVelocity": None,
 }])

@@ -1,6 +1,3 @@
-# TODO il ne faut pas que l'intersection des parents soit trop importante
-
-
 import json, os, copy
 import pandas as pd
 import numpy as np
@@ -518,7 +515,7 @@ def track_id_changes(json_path, csv_path, outputFile, N_FRAMES_PREVIOUS_DISAPPEA
     return parentsList_return
 
 
-def exportData(fusionDict, changeIDList, changeIDList_all, savefolder):
+def exportData(fusionDict, changeIDList, changeIDList_all, savefolder, extension):
     # on remplace fusionDict en un dataframe
     rows = []
     for frame, tracks in fusionDict.items():
@@ -600,9 +597,9 @@ def findMerge(dataFolder, extension, score_thres=0.7, OVERLAP_THRESH=0.1,
             - changeIDList (2D list): Liste des chgmt d'id avec par ligne [frame, new_id, old_id]
     """
     
-    contourFile = dataFolder + "/contours_" + extension +".json"  # Fichier des contours
-    richFile = dataFolder + "/rich_" + extension +".csv"  # Fichier de tracking
-    outputFileHistoryPath = dataFolder + "/fusionHistory_" + extension + ".txt"
+    contourFile = os.path.join(dataFolder, f"contours_{extension}.json")
+    richFile = os.path.join(dataFolder, f"rich_{extension}.csv")
+    outputFileHistoryPath = os.path.join(dataFolder, f"fusionHistory_{extension}.csv")
     
     # Lance la détection des fusions
     with open(outputFileHistoryPath, 'w') as f:
@@ -654,18 +651,14 @@ def findMerge(dataFolder, extension, score_thres=0.7, OVERLAP_THRESH=0.1,
     #TODO il faut faire pareil pour les merges
       
     # Export des résultats finaux
-    exportData(fusionDict, changeIDList_clean, changeIDList_all, dataFolder)
+    exportData(fusionDict, changeIDList_clean, changeIDList_all, dataFolder, extension)
     
     return fusionDict, changeIDList_clean
 
 ######################################################################################################
 
-dataFolder=r"My_output\SaveData3"   # Define the folder you want the data to save in
-extension="T113_2_60V_2" 
-# dataFolder = "My_output/Test6/"
-# extension = "Test6"
-findMerge(dataFolder, extension, score_thres=0.7, OVERLAP_THRESH=0.1,
-                                    MIN_OVERLAP_SAME=0.7, POST_FUSION_FRAMES=2, N_FRAMES_PREVIOUS_DISAPPEAR=3, 
-                                    N_FRAMES_POST_DISAPPEAR=2,
-                                    IMAGE_SHAPE=(1024, 1024), DILATE_ITERS=1
-                                    )
+# dataFolder=r"My_output\SaveData3"   # Define the folder you want the data to save in
+# extension="T113_2_60V_2" 
+# # dataFolder = "My_output/Test6/"
+# # extension = "Test6"
+# findMerge("My_output/Test6", "Test6")

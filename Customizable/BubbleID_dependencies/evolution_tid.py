@@ -190,3 +190,6 @@ def evolution_tid(savefolder, extension, score_thres):
     results.to_csv(out_csv, index=False)
 
     print(f"Results saved to: {out_csv}")
+    
+    
+evolution_tid(savefolder, extension, score_thres)
