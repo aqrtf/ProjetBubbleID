@@ -154,7 +154,7 @@ for track_id in sorted(df_score['track_id'].unique()):
         "last_attach_frame": last_attach_frame,
         "detach_frame": detach_frame,
         "dwell_frames": dwell_frames,
-        "dwell_seconds": dwell_frames/fps, #TODO
+        "dwell_seconds": dwell_frames/fps, #TODO determine fps
         "n_frames_tracked": n_frames_tracked,
         "n_unknown": n_unknown,
         "missing_detection": missing_frame,

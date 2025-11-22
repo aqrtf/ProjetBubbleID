@@ -1,3 +1,6 @@
+from csteDef import *
+TOLERANCE_FRAME = 3
+
 def ComputeDepartureDiameter(self,
                                 *,
                                 k: int = 3,
@@ -22,8 +25,6 @@ def ComputeDepartureDiameter(self,
     # Chemins vers les fichiers de données
     rich_csv = os.path.join(self.savefolder, f"rich_{self.extension}.csv")          # Données enrichies des bulles
     evolution_csv = os.path.join(self.savefolder, f"evolutionID_{self.extension}.csv") 
-    frames_path = os.path.join(self.savefolder, f'frames_{self.extension}.npy')     # Liste des frames par bulle
-    bubclass_path = os.path.join(self.savefolder, f'bubclass_{self.extension}.npy') # Classification des bulles
     
     # Fichier de sortie par défaut
     if out_csv is None:
@@ -34,8 +35,6 @@ def ComputeDepartureDiameter(self,
         raise FileNotFoundError(f"{rich_csv} non trovato.")
     if not os.path.isfile(evolution_csv):
         raise FileNotFoundError(f"{evolution_csv} non trovato.")
-    if not os.path.isfile(frames_path) or not os.path.isfile(bubclass_path):
-        raise FileNotFoundError("frames_*.npy o bubclass_*.npy non trovati.")
     if not getattr(self, "mm_per_px", None):
         raise RuntimeError("mm_per_px non impostato.")
 
@@ -76,9 +75,6 @@ def ComputeDepartureDiameter(self,
             x.append(int(df[(df["frame0"]==fr) & (df["track_id"] == tid_arr[irow][fr])].iloc[0].at["class_id"]))
         bubclass_arr.append(x)
 
-    # Chargement des arrays numpy
-    # frames_arr = np.load(frames_path, allow_pickle=True)    # frames_arr[tid] = liste des frames de la bulle tid
-    # bubclass_arr = np.load(bubclass_path, allow_pickle=True) # bubclass_arr[tid] = liste des classifications
 
     # =============================================================================
     # SECTION 2: FONCTIONS AUXILIAIRES
@@ -287,9 +283,6 @@ def ComputeDepartureDiameter(self,
     # n_tracks = len(frames_arr)  # Nombre total de bulles
     
     for idx, tid in enumerate(tid_arr):
-        # Chargement des données pour la bulle tid
-        # frames0 = list(frames_arr[tid]) if isinstance(frames_arr[tid], (list, np.ndarray)) else []
-        # labels = list(bubclass_arr[tid]) if isinstance(bubclass_arr[tid], (list, np.ndarray)) else []
         frames0 = frames_arr[idx]
         labels = bubclass_arr[idx]
         
@@ -305,7 +298,8 @@ def ComputeDepartureDiameter(self,
                 "fit_kind": fit_kind,
                 "conf_dep_last_attached_pct": np.nan, 
                 "conf_dep_first_detached_pct": np.nan,
-                "conf_dep_mean_pct": np.nan
+                "conf_dep_mean_pct": np.nan,
+                "birth": None,
             }
             # Initialisation de tous les diamètres à NaN
             for m, _ in methods:
@@ -315,6 +309,14 @@ def ComputeDepartureDiameter(self,
                 base[f"D_{m}_mm_interp"] = np.nan
             rows_out.append(base)
             continue
+        
+        # Est ce qu'on voit la naissance de la bulle
+        # On suppose que si on voit la bulle dans les premieres frame de la video alors elle n'est pas nouvelle
+        # TODO mettre une condition sur la taille ???? 
+        if set(range(0, TOLERANCE_FRAME)) & set(frames0): # or DETACHED in labels[0:TOLERANCE_FRAME]: # pas sur de l'interet de la 2eme condition
+            birth = False
+        else:
+            birth = True
 
         # RECHERCHE DU DÉTACHEMENT POUR CETTE BULLE
         attach_start, attach_end_i, last_attached, detach_frame, fr_s = _find_departure(frames0, labels)
@@ -331,7 +333,8 @@ def ComputeDepartureDiameter(self,
                 "fit_kind": fit_kind,
                 "conf_dep_last_attached_pct": np.nan, 
                 "conf_dep_first_detached_pct": np.nan,
-                "conf_dep_mean_pct": np.nan
+                "conf_dep_mean_pct": np.nan,
+                "birth": birth
             }
             for m, _ in methods:
                 base[f"D_{m}_px_discr"] = np.nan
@@ -395,12 +398,13 @@ def ComputeDepartureDiameter(self,
         # STRUCTURE DE BASE DES RÉSULTATS
         base = {
             "bubble_id": df_evol["bubble_id"].iloc[idx],
-            "attach_start_frame": int(attach_start) if attach_start is not None else None,
-            "last_attached_frame": int(last_attached) if last_attached is not None else None,
-            "detach_frame": int(detach_frame) if detach_frame is not None else None,
+            "attach_start_frame": int(attach_start)+1 if attach_start is not None else None,
+            "last_attached_frame": int(last_attached)+1 if last_attached is not None else None,
+            "detach_frame": int(detach_frame)+1 if detach_frame is not None else None,
             "note": "ok" if detach_frame is not None else "no_detach_found",
             "k": k, 
-            "fit_kind": fit_kind
+            "fit_kind": fit_kind,
+            "birth": birth
         }
 
         # =============================================================================
@@ -475,7 +479,7 @@ def ComputeDepartureDiameter(self,
     # DÉFINITION DES COLONNES DU CSV DE SORTIE
     cols_head = [
         "bubble_id", "attach_start_frame", "last_attached_frame", "detach_frame", 
-        "note", "k", "fit_kind", "conf_dep_last_attached_pct", 
+        "note", "birth", "k", "fit_kind", "conf_dep_last_attached_pct", 
         "conf_dep_first_detached_pct", "conf_dep_mean_pct"
     ]
     
