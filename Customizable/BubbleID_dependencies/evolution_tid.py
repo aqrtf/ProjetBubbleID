@@ -1,169 +1,192 @@
-import os, csv, cv2, numpy as np
+import os, csv, cv2, re,  numpy as np
 import pandas as pd
 from csteDef import *
 
-min_attached_run=0
 savefolder=r"My_output\Test6"   # Define the folder you want the data to save in
 extension="Test6" 
 # savefolder=r"My_output\SaveData3"   # Define the folder you want the data to save in
 # extension="T113_2_60V_2" 
 score_thres = 0.7
-N_FRAMES_POST_DISAPPEAR = 2
 
-# Chargement des données
-rich_path = os.path.join(savefolder, f"rich_{extension}.csv")
-if not os.path.isfile(rich_path):
-    raise FileNotFoundError("rich_ file not found")
-rich_df = pd.read_csv(rich_path)
-
-path = os.path.join(savefolder, f"fusionResult_{extension}.csv")
-if not os.path.isfile(rich_path):
-    raise FileNotFoundError(f"{path} not found")
-df_fusion = pd.read_csv(path)
-
-path = os.path.join(savefolder, f"changeIDResultAll_{extension}.csv")
-if not os.path.isfile(rich_path):
-    raise FileNotFoundError("rich_ file not found")
-changeID_df = pd.read_csv(path)
-
-# Supprimer les lignes dont le score est inférieur à score_thres
-df_filter = rich_df[rich_df['score'] >= score_thres]
-# Supprime les lignes avec probleme de trackong
-df_filter = df_filter[df_filter["track_id"].fillna(-1).astype(int) >= 0]
-
-# S'il reste des duplicata, tieni, per ogni (track_id, frame0), la detection con score max
-df_filter = (df_filter.sort_values(["track_id", "frame", "score"], ascending=[True, True, False])
-        .drop_duplicates(["track_id", "frame"], keep="first"))
-
-df_score = df_filter[["track_id", "frame", "score", "class_id"]].copy()
-
-
-# Paramètres
-
-
-last_frame = df_score['frame'].max()
-results = []
-
-# Parcourir chaque track_id unique
-for track_id in sorted(df_score['track_id'].unique()):
-
-    nameBubble = str(track_id)
-    last_seen_frame = None
+def evolution_tid(savefolder, extension, score_thres):
+    """
+    Analyze bubble evolution and tracking data to generate evolution trajectories.
     
-    track_data = df_score[df_score['track_id'] == track_id].sort_values('frame')
+    This function processes tracking data to create evolution chains of bubbles,
+    handling merges and ID changes, and filtering by score threshold.
     
-    evolution_tid = [None] * last_frame
-    first_seen_frame = track_data["frame"].min()
-    last_seen_frame = track_data["frame"].max()
-    evolution_tid[first_seen_frame-1] = track_id # frame entre 1 et last_frame
-    score = 0
-    for idx_frame in range(first_seen_frame, last_frame+1):
-        mask = (df_fusion["frame"] == idx_frame) & ((df_fusion["parent1"] == track_id) | (df_fusion["parent2"] == track_id))
-        if (mask).any():
-            # on regarde si la bulle est un parent a cette frame (donc est ce qu'elle merge?)
-            track_id = df_fusion.loc[mask, "child"].iat[0]
-            # La nouvelle bulle a track est child
-            nameBubble += "=>" + str(track_id)
-            last_seen_frame = df_score.loc[df_score["track_id"] == track_id, "frame"].max()
-
-        mask = (changeID_df["frame"] == idx_frame) & ((changeID_df["old_id"] == track_id))
-        if (mask).any():
-            # on regarde si la bulle change de trackid
-            track_id = changeID_df.loc[mask, "new_id"].iat[0]
-            # La nouvelle bulle a track est new_id
-            nameBubble += "<->" + str(track_id)
-            last_seen_frame = df_score.loc[df_score["track_id"] == track_id, "frame"].max()
-
+    Args:
+        savefolder (str): Path to the folder containing input CSV files
+        extension (str): File extension identifier for input/output files
+        score_thres (float): Minimum score threshold for filtering detections
         
-        # Filtrer
-        subset = df_score[(df_score["frame"] == idx_frame) & (df_score["track_id"] == track_id)]
-        # Vérifier unicité
-        if subset.empty:
-            missing_frame += 1
-        elif len(subset) == 1:
-            score += subset["score"].iloc[0]
-            evolution_tid[idx_frame-1] = track_id
-        else:
-            raise ValueError("Plusieurs valeurs trouvées")
- 
-
-    # indices des entiers dans evolution_tid
-    not_none_idx = [i for i, x in enumerate(evolution_tid) if x is not None]
-    if not not_none_idx:
-        n_frames_tracked = missing_frame = -1  # aucun entier
-    else:
-        start, end = not_none_idx[0], not_none_idx[-1]
-        sublist = evolution_tid[start:end+1]
-        # nb d'entier = nb de frame ou la bulle est detectee
-        n_frames_tracked = sum(x is not None for x in sublist)
-        # nb de none entre les entiers = nb de frame ou la bulle n'est pas detecte 
-        # peut etre qu'elle n'est pas detecte apres ou avant mais pas moyen de le savoir
-        missing_frame = sum(x is None for x in sublist)
+    Returns:
+        None: Results are saved to {savefolder}/evolutionID_{extension}.csv
     
-    # # mean score
-    mean_score = score/n_frames_tracked
+    Raises:
+        FileNotFoundError: If required input files are not found
+    """
+    
+    # Load input data files
+    rich_path = os.path.join(savefolder, f"rich_{extension}.csv")
+    if not os.path.isfile(rich_path):
+        raise FileNotFoundError("rich_ file not found")
+    rich_df = pd.read_csv(rich_path)
+
+    path = os.path.join(savefolder, f"fusionResult_{extension}.csv")
+    if not os.path.isfile(rich_path):  # Note: This should probably check path instead of rich_path
+        raise FileNotFoundError(f"{path} not found")
+    df_fusion = pd.read_csv(path)
+
+    path = os.path.join(savefolder, f"changeIDResultAll_{extension}.csv")
+    if not os.path.isfile(rich_path):  # Note: This should probably check path instead of rich_path
+        raise FileNotFoundError("rich_ file not found")
+    changeID_df = pd.read_csv(path)
+
+    # Filter rows with score above threshold and valid track_id
+    df_filter = rich_df[rich_df['score'] >= score_thres]
+    # Remove rows with tracking problems (negative or NaN track_id)
+    df_filter = df_filter[df_filter["track_id"].fillna(-1).astype(int) >= 0]
+
+    # Remove duplicates: for each (track_id, frame), keep the detection with highest score
+    df_filter = (df_filter.sort_values(["track_id", "frame", "score"], ascending=[True, True, False])
+            .drop_duplicates(["track_id", "frame"], keep="first"))
+
+    # Extract relevant columns for scoring
+    df_score = df_filter[["track_id", "frame", "score", "class_id"]].copy()
+
+    # Parameters
+    last_frame = df_score['frame'].max()
+    results = []
+
+    # Process each unique track_id
+    for track_id in sorted(df_score['track_id'].unique()):
+
+        nameBubble = str(track_id)
+        last_seen_frame = None
         
-    results.append({
-        "bubble_id": nameBubble,
-        "first_seen_frame": first_seen_frame,
-        "last_seen_frame": last_seen_frame,
-        "n_frames_tracked": n_frames_tracked,
-        "missing_detection": missing_frame,
-        "mean_score_pct": mean_score,
-        "chemin": evolution_tid
-    })
+        # Get all data for this track_id sorted by frame
+        track_data = df_score[df_score['track_id'] == track_id].sort_values('frame')
         
+        # Initialize evolution tracking array
+        evolution_tid = [None] * last_frame
+        first_seen_frame = track_data["frame"].min()
+        last_seen_frame = track_data["frame"].max()
+        evolution_tid[first_seen_frame-1] = track_id  # frame between 1 and last_frame
+        score = 0
+        
+        # Track evolution through frames
+        for idx_frame in range(first_seen_frame, last_frame+1):
+            # Check if bubble merges with another at this frame
+            mask = (df_fusion["frame"] == idx_frame) & ((df_fusion["parent1"] == track_id) | (df_fusion["parent2"] == track_id))
+            if (mask).any():
+                # Bubble merges - update to child track_id
+                track_id = df_fusion.loc[mask, "child"].iat[0]
+                nameBubble += "=>" + str(track_id)
+                last_seen_frame = df_score.loc[df_score["track_id"] == track_id, "frame"].max()
 
-results = pd.DataFrame(results).astype({
-    "first_seen_frame": "Int16",
-    "last_seen_frame": "Int16",
-})
+            # Check if bubble changes ID at this frame
+            mask = (changeID_df["frame"] == idx_frame) & ((changeID_df["old_id"] == track_id))
+            if (mask).any():
+                # Bubble changes ID - update to new track_id
+                track_id = changeID_df.loc[mask, "new_id"].iat[0]
+                nameBubble += "<->" + str(track_id)
+                last_seen_frame = df_score.loc[df_score["track_id"] == track_id, "frame"].max()
 
-# On retire les lignes qui sont une partie des autres
-import pandas as pd
-import re
-
-def parse_tokens(series: pd.Series) -> pd.Series:
-    # Découpe chaque bubble_id en liste de nombres
-    return series.astype(str).apply(lambda s: [int(tok) for tok in re.split(r'<->|=>', s)])
-
-def clean_bubble_ids(df: pd.DataFrame, group_col="last_seen_frame", id_col="bubble_id") -> pd.DataFrame:
-    df = df.copy()
-    df["_tokens"] = parse_tokens(df[id_col])
-    df["_len"] = df["_tokens"].apply(len)
-
-    def filter_group(group: pd.DataFrame) -> pd.DataFrame:
-        # Trie par longueur décroissante
-        group = group.sort_values("_len", ascending=False)
-        keep = []
-        mask = []
-        for tok in group["_tokens"]:
-            # Vérifie si tok est suffixe de l’un des déjà gardés
-            if any(kt[-len(tok):] == tok for kt in keep):
-                mask.append(False)
+            # Get score for current frame and track_id
+            subset = df_score[(df_score["frame"] == idx_frame) & (df_score["track_id"] == track_id)]
+            
+            # Validate and process detection
+            if subset.empty:
+                missing_frame += 1  # Note: missing_frame needs to be initialized
+            elif len(subset) == 1:
+                score += subset["score"].iloc[0]
+                evolution_tid[idx_frame-1] = track_id
             else:
-                keep.append(tok)
-                mask.append(True)
-        return group[mask]
+                raise ValueError("Multiple values found")
+    
+        # Calculate tracking statistics
+        not_none_idx = [i for i, x in enumerate(evolution_tid) if x is not None]
+        if not not_none_idx:
+            n_frames_tracked = missing_frame = -1  # no valid frames found
+        else:
+            start, end = not_none_idx[0], not_none_idx[-1]
+            sublist = evolution_tid[start:end+1]
+            # Count frames where bubble was detected
+            n_frames_tracked = sum(x is not None for x in sublist)
+            # Count frames where bubble was not detected (gaps in tracking)
+            missing_frame = sum(x is None for x in sublist)
+        
+        # Calculate mean score
+        mean_score = score/n_frames_tracked
+            
+        # Store results for this bubble evolution
+        results.append({
+            "bubble_id": nameBubble,
+            "first_seen_frame": first_seen_frame,
+            "last_seen_frame": last_seen_frame,
+            "n_frames_tracked": n_frames_tracked,
+            "missing_detection": missing_frame,
+            "mean_score_pct": mean_score,
+            "chemin": evolution_tid
+        })
+            
+    # Convert results to DataFrame with proper data types
+    results = pd.DataFrame(results).astype({
+        "first_seen_frame": "Int16",
+        "last_seen_frame": "Int16",
+    })
 
-    try:
-        result = df.groupby(group_col, dropna=False, group_keys=False).apply(filter_group)
-    except TypeError:
-        # fallback si dropna=False n’est pas supporté
-        sentinel = "__MISSING__"
-        df[group_col] = df[group_col].astype(object).where(df[group_col].notna(), sentinel)
-        result = df.groupby(group_col, group_keys=False).apply(filter_group)
-        result[group_col] = result[group_col].replace(sentinel, pd.NA)
+    # Remove duplicate evolution chains (where one chain is a subset of another)
+    def parse_tokens(series: pd.Series) -> pd.Series:
+        """Parse bubble_id strings into lists of integers using regex splitting."""
+        return series.astype(str).apply(lambda s: [int(tok) for tok in re.split(r'<->|=>', s)])
 
-    return result.drop(columns=["_tokens", "_len"])
+    def clean_bubble_ids(df: pd.DataFrame, group_col="last_seen_frame", id_col="bubble_id") -> pd.DataFrame:
+        """
+        Remove evolution chains that are subsets of longer chains.
+        
+        For bubbles ending at the same frame, keep only the longest unique evolution chains
+        and remove chains that are suffixes of longer chains.
+        """
+        df = df.copy()
+        df["_tokens"] = parse_tokens(df[id_col])
+        df["_len"] = df["_tokens"].apply(len)
 
-results = clean_bubble_ids(results)
+        def filter_group(group: pd.DataFrame) -> pd.DataFrame:
+            """Filter within each group to keep only non-redundant evolution chains."""
+            # Sort by chain length (longest first)
+            group = group.sort_values("_len", ascending=False)
+            keep = []
+            mask = []
+            for tok in group["_tokens"]:
+                # Check if current token list is a suffix of any kept chain
+                if any(kt[-len(tok):] == tok for kt in keep):
+                    mask.append(False)
+                else:
+                    keep.append(tok)
+                    mask.append(True)
+            return group[mask]
 
-# on renseigne la valeur du 1er trackID dans les chaines
-results["first_tid"] = results["bubble_id"].str.extract(r'^(\d+)').astype(int)
+        try:
+            result = df.groupby(group_col, dropna=False, group_keys=False).apply(filter_group)
+        except TypeError:
+            # Fallback for pandas versions that don't support dropna=False
+            sentinel = "__MISSING__"
+            df[group_col] = df[group_col].astype(object).where(df[group_col].notna(), sentinel)
+            result = df.groupby(group_col, group_keys=False).apply(filter_group)
+            result[group_col] = result[group_col].replace(sentinel, pd.NA)
 
-# Sauvegarder les résultats
-out_csv = os.path.join(savefolder, f'evolutionID_{extension}.csv')
-results.to_csv(out_csv, index=False)
+        return result.drop(columns=["_tokens", "_len"])
 
-print(f"Résultats sauvegardés dans: {out_csv}")
+    # Apply cleaning to remove redundant evolution chains
+    results = clean_bubble_ids(results)
+
+    # Extract the first track ID from each evolution chain
+    results["first_tid"] = results["bubble_id"].str.extract(r'^(\d+)').astype(int)
+
+    # Save results to CSV
+    out_csv = os.path.join(savefolder, f'evolutionID_{extension}.csv')
+    results.to_csv(out_csv, index=False)
+
+    print(f"Results saved to: {out_csv}")

@@ -12,7 +12,7 @@ def ComputeDepartureDiameter(self,
     CALCULE LE DIAMETRE DE DEPART DES BULLES
     Objectif: Determiner le diamètre des bulles au moment où elles se détachent
     """
-    import os, math, csv
+    import os, math, csv, ast
     import numpy as np, pandas as pd
 
     # =============================================================================
@@ -21,6 +21,7 @@ def ComputeDepartureDiameter(self,
     
     # Chemins vers les fichiers de données
     rich_csv = os.path.join(self.savefolder, f"rich_{self.extension}.csv")          # Données enrichies des bulles
+    evolution_csv = os.path.join(self.savefolder, f"evolutionID_{self.extension}.csv") 
     frames_path = os.path.join(self.savefolder, f'frames_{self.extension}.npy')     # Liste des frames par bulle
     bubclass_path = os.path.join(self.savefolder, f'bubclass_{self.extension}.npy') # Classification des bulles
     
@@ -31,6 +32,8 @@ def ComputeDepartureDiameter(self,
     # VÉRIFICATIONS DE SÉCURITÉ: les fichiers existent-ils?
     if not os.path.isfile(rich_csv):
         raise FileNotFoundError(f"{rich_csv} non trovato.")
+    if not os.path.isfile(evolution_csv):
+        raise FileNotFoundError(f"{evolution_csv} non trovato.")
     if not os.path.isfile(frames_path) or not os.path.isfile(bubclass_path):
         raise FileNotFoundError("frames_*.npy o bubclass_*.npy non trovati.")
     if not getattr(self, "mm_per_px", None):
@@ -62,10 +65,20 @@ def ComputeDepartureDiameter(self,
     miss = [c for c in need if c not in df.columns]
     if miss: 
         raise ValueError(f"Mancano colonne nel rich CSV: {miss}")
+    
+    df_evol = pd.read_csv(evolution_csv)
+    tid_arr = df_evol["chemin"].apply(ast.literal_eval).to_list()
+    frames_arr = [[j for j, val in enumerate(row) if val is not None] for row in tid_arr]
+    bubclass_arr = []
+    for irow, row in enumerate(frames_arr):
+        x = []
+        for fr in row:
+            x.append(int(df[(df["frame0"]==fr) & (df["track_id"] == tid_arr[irow][fr])].iloc[0].at["class_id"]))
+        bubclass_arr.append(x)
 
     # Chargement des arrays numpy
-    frames_arr = np.load(frames_path, allow_pickle=True)    # frames_arr[tid] = liste des frames de la bulle tid
-    bubclass_arr = np.load(bubclass_path, allow_pickle=True) # bubclass_arr[tid] = liste des classifications
+    # frames_arr = np.load(frames_path, allow_pickle=True)    # frames_arr[tid] = liste des frames de la bulle tid
+    # bubclass_arr = np.load(bubclass_path, allow_pickle=True) # bubclass_arr[tid] = liste des classifications
 
     # =============================================================================
     # SECTION 2: FONCTIONS AUXILIAIRES
@@ -149,7 +162,7 @@ def ComputeDepartureDiameter(self,
                 
         return attach_start, attach_end_i, last_attached, detach_frame, fr_s
 
-    def _series_for_track(tid, col_name):
+    def _series_for_track(frames0, tid, col_name):
         """
         RÉCUPÈRE LA SÉRIE TEMPORELLE D'UNE PROPRIÉTÉ POUR UNE BULLE DONNÉE
         Exemple: série des aires (area_px) pour la bulle tid
@@ -165,7 +178,13 @@ def ComputeDepartureDiameter(self,
             cols.append("score")
 
         # Filtrage: seulement la bulle concernée
-        sdf = dfl[dfl["track_id"].astype(int) == tid][cols].copy()
+        conditions = pd.DataFrame({
+            "frame0": frames0,
+            "track_id": [x for x in tid if x is not None]
+        })
+
+        sdf = dfl.merge(conditions, on=["frame0", "track_id"])
+        # sdf = dfl[dfl["track_id"].astype(int) == tid][cols].copy() il n'existe plus qu'u seul tid pour une bulle
         if sdf.empty:
             return []
 
@@ -265,17 +284,19 @@ def ComputeDepartureDiameter(self,
     # =============================================================================
     
     rows_out = []  # Stockage des résultats
-    n_tracks = len(frames_arr)  # Nombre total de bulles
+    # n_tracks = len(frames_arr)  # Nombre total de bulles
     
-    for tid in range(n_tracks):
+    for idx, tid in enumerate(tid_arr):
         # Chargement des données pour la bulle tid
-        frames0 = list(frames_arr[tid]) if isinstance(frames_arr[tid], (list, np.ndarray)) else []
-        labels = list(bubclass_arr[tid]) if isinstance(bubclass_arr[tid], (list, np.ndarray)) else []
+        # frames0 = list(frames_arr[tid]) if isinstance(frames_arr[tid], (list, np.ndarray)) else []
+        # labels = list(bubclass_arr[tid]) if isinstance(bubclass_arr[tid], (list, np.ndarray)) else []
+        frames0 = frames_arr[idx]
+        labels = bubclass_arr[idx]
         
         # CAS 1: BULLE SANS FRAMES → DONNÉES MANQUANTES
         if not frames0:
             base = {
-                "bubble_id": tid, 
+                "bubble_id": df_evol["bubble_id"].iloc[idx], 
                 "attach_start_frame": None, 
                 "last_attached_frame": None,
                 "detach_frame": None, 
@@ -301,7 +322,7 @@ def ComputeDepartureDiameter(self,
         # CAS 2: AUCUNE SÉQUENCE ATTACHÉE VALIDE TROUVÉE
         if attach_start is None:
             base = {
-                "bubble_id": tid, 
+                "bubble_id": df_evol["bubble_id"].iloc[idx], 
                 "attach_start_frame": None, 
                 "last_attached_frame": None,
                 "detach_frame": None, 
@@ -323,13 +344,13 @@ def ComputeDepartureDiameter(self,
         # CAS 3: BULLE VALIDE → CALCULS COMPLETS
         
         # CHARGEMENT DES SÉRIES TEMPORELLES POUR CETTE BULLE
-        ser_area = _series_for_track(tid, "area_px")      # Série des aires
-        ser_perim = _series_for_track(tid, "perim_px")    # Série des périmètres
-        ser_fmax = _series_for_track(tid, "feret_max_px") # Série Feret max
-        ser_fmin = _series_for_track(tid, "feret_min_px") # Série Feret min
-        ser_eMaj = _series_for_track(tid, "ell_major_px") # Série ellipse majeur
-        ser_eMin = _series_for_track(tid, "ell_minor_px") # Série ellipse mineur
-        ser_score = _series_for_track(tid, "score")       # Série des scores de confiance
+        ser_area = _series_for_track(frames0, tid, "area_px")      # Série des aires
+        ser_perim = _series_for_track(frames0, tid, "perim_px")    # Série des périmètres
+        ser_fmax = _series_for_track(frames0, tid, "feret_max_px") # Série Feret max
+        ser_fmin = _series_for_track(frames0, tid, "feret_min_px") # Série Feret min
+        ser_eMaj = _series_for_track(frames0, tid, "ell_major_px") # Série ellipse majeur
+        ser_eMin = _series_for_track(frames0, tid, "ell_minor_px") # Série ellipse mineur
+        ser_score = _series_for_track(frames0, tid, "score")       # Série des scores de confiance
 
         def _series_method(name):
             """
@@ -373,7 +394,7 @@ def ComputeDepartureDiameter(self,
 
         # STRUCTURE DE BASE DES RÉSULTATS
         base = {
-            "bubble_id": tid,
+            "bubble_id": df_evol["bubble_id"].iloc[idx],
             "attach_start_frame": int(attach_start) if attach_start is not None else None,
             "last_attached_frame": int(last_attached) if last_attached is not None else None,
             "detach_frame": int(detach_frame) if detach_frame is not None else None,
@@ -482,3 +503,14 @@ def ComputeDepartureDiameter(self,
 
     print(f"[ComputeDepartureDiameter] salvato: {out_csv}")
     return rows_out
+
+
+################################################################################
+class Myclass:
+    savefolder = r"C:\Users\afara\Documents\EPFL\cours\MA3\Projet\ProjetBubbleID\My_output\Test6"
+    extension = "Test6"
+    mm_per_px = 0.023730276134122288
+    
+self = Myclass()
+
+ComputeDepartureDiameter(self)
