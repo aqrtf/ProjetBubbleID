@@ -135,7 +135,7 @@ def bulle_changement(data_by_frame):
         if frame == 1: #La frame 1 ne nous interresse pas
             continue
         previous_frame = frame - 1
-        if previous_frame not in data_by_frame:  # TODO Gérer si frames manquantes
+        if previous_frame not in data_by_frame:  
             print("no previous frame find at frame ", frame)
             continue
 
@@ -648,7 +648,6 @@ def findMerge(dataFolder, extension, score_thres=0.7, OVERLAP_THRESH=0.1,
             if changeIDList[j][2] == changeIDList[idx][1]:
                 changeIDList[j][2] = changeIDList[idx][2]
             
-    #TODO il faut faire pareil pour les merges
       
     # Export des résultats finaux
     exportData(fusionDict, changeIDList_clean, changeIDList_all, dataFolder, extension)

@@ -1,0 +1,10 @@
+PARAMETERS:
+	IMAGE_SHAPE = (1024, 1024)
+	DILATE_ITERS = 1
+	OVERLAP_THRESH = 0.1
+	POST_FUSION_FRAMES = 2
+	N_FRAMES_PREVIOUS_DISAPPEAR = 3
+	N_FRAMES_POST_DISAPPEAR = 2
+	score_thres = 0.7
+	MIN_OVERLAP_SAME = 0.7
+============================================================

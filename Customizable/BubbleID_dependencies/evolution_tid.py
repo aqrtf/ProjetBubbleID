@@ -2,8 +2,8 @@ import os, csv, cv2, re,  numpy as np
 import pandas as pd
 from csteDef import *
 
-savefolder=r"My_output\Test6"   # Define the folder you want the data to save in
-extension="Test6" 
+# savefolder=r"My_output\Test6"   # Define the folder you want the data to save in
+# extension="Test6" 
 # savefolder=r"My_output\SaveData3"   # Define the folder you want the data to save in
 # extension="T113_2_60V_2" 
 score_thres = 0.7
@@ -192,4 +192,4 @@ def evolution_tid(savefolder, extension, score_thres):
     print(f"Results saved to: {out_csv}")
     
     
-evolution_tid(savefolder, extension, score_thres)
+# evolution_tid(savefolder, extension, score_thres)

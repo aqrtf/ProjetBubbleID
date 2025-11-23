@@ -2,7 +2,7 @@ import os, csv, cv2, re, numpy as np
 import pandas as pd
 from csteDef import *
 
-def analyze_dwell_time(savefolder, extension, score_thres = 0.7, n_frames_post_disappear=2):
+def analyze_dwell_time(savefolder, extension, score_thres = 0.7, n_frames_post_disappear=2, fps = 4000):
     """
     Analyze bubble dwell time and detachment events from tracking data.
     
@@ -50,7 +50,6 @@ def analyze_dwell_time(savefolder, extension, score_thres = 0.7, n_frames_post_d
     df_score = df_filter[["track_id", "frame", "score", "class_id"]].copy()
 
     # Parameters
-    fps = 4000  # TODO: Determine automatically as in previous code
     last_frame = df_score['frame'].max()
     results = []
 
@@ -159,7 +158,7 @@ def analyze_dwell_time(savefolder, extension, score_thres = 0.7, n_frames_post_d
             "last_attach_frame": last_attach_frame,
             "detach_frame": detach_frame,
             "dwell_frames": dwell_frames,
-            "dwell_seconds": dwell_frames / fps,  # TODO: Use actual FPS
+            "dwell_seconds": dwell_frames / fps,
             "n_frames_tracked": n_frames_tracked,
             "n_unknown": n_unknown,
             "missing_detection": missing_frame,
@@ -223,10 +222,10 @@ def analyze_dwell_time(savefolder, extension, score_thres = 0.7, n_frames_post_d
 
     print(f"Results saved to: {out_csv}")
 
-#########################################################
-savefolder=r"My_output\Test6"   # Define the folder you want the data to save in
-extension="Test6" 
-# savefolder=r"My_output\SaveData3"   # Define the folder you want the data to save in
-# extension="T113_2_60V_2" 
+# #########################################################
+# savefolder=r"My_output\Test6"   # Define the folder you want the data to save in
+# extension="Test6" 
+# # savefolder=r"My_output\SaveData3"   # Define the folder you want the data to save in
+# # extension="T113_2_60V_2" 
 
-analyze_dwell_time(savefolder, extension)
+# analyze_dwell_time(savefolder, extension)

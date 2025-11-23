@@ -55,7 +55,7 @@ def mainProperties(savefolder, extension,
 
                 if bubble.birth:
                     # On a toute la croissance de la bulle
-                    growingTimes.append(n_attach_frame / fps)  # TODO fps
+                    growingTimes.append(n_attach_frame / fps)
                 else:
                     growingTimes.append(np.nan)
 

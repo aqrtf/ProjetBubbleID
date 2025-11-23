@@ -5,6 +5,8 @@ import os
 
 from csteDef import *
 
+folderPath = os.path.dirname(os.path.abspath(__file__))
+
 class BubbleIDGUI:
     def __init__(self, root):
         self.root = root
@@ -24,8 +26,13 @@ class BubbleIDGUI:
         # Liste des modèles disponibles
         self.available_models = [
             "3classes_tip_jpeg",
-            "autre_modele_1", 
-            "autre_modele_2"
+            "model_all_jpeg", 
+            "model_cav_jpeg",
+            "model_tip_jpeg",
+            "model_all_png",
+            "model_cav_png",
+            "model_tip_png",
+            "model_old"
         ]
         
         self.setup_ui()
@@ -40,9 +47,6 @@ class BubbleIDGUI:
         main_frame = ttk.Frame(self.root)
         main_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
         
-        # Titre
-        title_label = ttk.Label(main_frame, text="BubbleID Analysis", font=("Arial", 16, "bold"))
-        title_label.pack(pady=10)
         
         # SECTION FILE
         file_frame = ttk.LabelFrame(main_frame, text="File", padding=15)
@@ -193,7 +197,7 @@ class BubbleIDGUI:
             from torch.cuda import is_available
             # Création des chemins
             imagesfolder = os.path.join(self.save_folder_var.get(), f"trimImages_{self.extension_var.get()}")
-            model_path = os.path.join("..\\MODELS\\", self.model_weights_var.get(), "model_final.pth")
+            model_path = os.path.join(os.path.dirname(folderPath), "MODELS", self.model_weights_var.get() + ".pth")
             device = "cuda" if is_available() else "cpu"
             
             # Créer le dossier de sauvegarde
@@ -297,7 +301,9 @@ class BubbleIDGUI:
                 return
             self.log_message(f"--- {step_name} completed ---\n")
     
-    def find_merge(self):      
+    def find_merge(self):   
+        if not self.validate_parameters():
+            return   
         self.update_status("Finding merges...")
         try:
             import BubbleID_dependencies.parentBubble as parentBubble
@@ -318,7 +324,9 @@ class BubbleIDGUI:
             self.log_message(f"Error: {str(e)}")
             self.update_status("Error")
     
-    def compute_dwell(self):      
+    def compute_dwell(self):  
+        if not self.validate_parameters():
+            return     
         self.update_status("Computing dwell time...")
         try:
             import BubbleID_dependencies.computedwell as computedwell
@@ -330,7 +338,9 @@ class BubbleIDGUI:
             self.log_message(f"Error computing dwell time: {str(e)}")
             self.update_status("Error")
     
-    def departure_diameter(self):
+    def departure_diameter(self):  
+        if not self.validate_parameters():
+            return
         self.update_status("Calculating departure diameter...")
         try:
             # À adapter selon votre méthode réelle
@@ -342,7 +352,9 @@ class BubbleIDGUI:
             self.log_message(f"Error calculating departure diameter: {str(e)}")
             self.update_status("Error")
     
-    def calc_bubble_properties(self):
+    def calc_bubble_properties(self):  
+        if not self.validate_parameters():
+            return
         self.update_status("Calculating bubble properties...")
         try:
             from BubbleID_dependencies.bubbleProperties import mainProperties
