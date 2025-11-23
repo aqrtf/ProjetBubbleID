@@ -599,7 +599,7 @@ def findMerge(dataFolder, extension, score_thres=0.7, OVERLAP_THRESH=0.1,
     
     contourFile = os.path.join(dataFolder, f"contours_{extension}.json")
     richFile = os.path.join(dataFolder, f"rich_{extension}.csv")
-    outputFileHistoryPath = os.path.join(dataFolder, f"fusionHistory_{extension}.csv")
+    outputFileHistoryPath = os.path.join(dataFolder, f"fusionHistory_{extension}.txt")
     
     # Lance la détection des fusions
     with open(outputFileHistoryPath, 'w') as f:
