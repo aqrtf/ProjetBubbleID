@@ -107,7 +107,7 @@ class BubbleIDGUI:
             ("Find Merge", self.find_merge),
             ("Compute Dwell", self.compute_dwell),
             ("Departure Diameter", self.departure_diameter),
-            ("Calc Bubble Properties", self.calc_bubble_properties)
+            ("Calc Bubble Properties", self.calc_bubble_properties),
         ]
         
         for i, (text, command) in enumerate(postprocess_buttons):
@@ -345,7 +345,8 @@ class BubbleIDGUI:
     def calc_bubble_properties(self):
         self.update_status("Calculating bubble properties...")
         try:
-            # À adapter selon votre méthode réelle
+            from BubbleID_dependencies.bubbleProperties import mainProperties
+            mainProperties(self.save_folder_var.get(), self.extension_var.get())
             self.log_message("Bubble properties calculation completed")
             self.update_status("Ready")
         except Exception as e:
