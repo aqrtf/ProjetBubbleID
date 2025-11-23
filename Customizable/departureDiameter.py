@@ -508,12 +508,3 @@ def ComputeDepartureDiameter(savefolder, extension,
     print(f"[ComputeDepartureDiameter] salvato: {out_csv}")
     return rows_out
 
-
-################################################################################
-
-savefolder = r"C:\Users\afara\Documents\EPFL\cours\MA3\Projet\ProjetBubbleID\My_output\Test6"
-extension = "Test6"
-    
-
-
-ComputeDepartureDiameter(savefolder, extension)

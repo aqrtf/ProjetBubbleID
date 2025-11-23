@@ -6,9 +6,8 @@ from csteDef import *
 # extension="Test6" 
 # savefolder=r"My_output\SaveData3"   # Define the folder you want the data to save in
 # extension="T113_2_60V_2" 
-score_thres = 0.7
 
-def evolution_tid(savefolder, extension, score_thres):
+def evolution_tid(savefolder, extension, score_thres=0.7):
     """
     Analyze bubble evolution and tracking data to generate evolution trajectories.
     
@@ -74,6 +73,7 @@ def evolution_tid(savefolder, extension, score_thres):
         last_seen_frame = track_data["frame"].max()
         evolution_tid[first_seen_frame-1] = track_id  # frame between 1 and last_frame
         score = 0
+        missing_frame = 0
         
         # Track evolution through frames
         for idx_frame in range(first_seen_frame, last_frame+1):

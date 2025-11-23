@@ -10,8 +10,8 @@ valid_methods = {"area", "feret_max", "feret_min", "ell_maj", "ell_min", "perim"
 def mainProperties(savefolder, extension,
                       diameterMethod=["mix"],
                       interp=True,
-                      chipName="T", tension=50,
-                      fps=4000, min_attach_frame=4):
+                      chipName="T", tension=50, 
+                      fps=4000, min_attach_frame=4): # TODO chipname/ tension
     """
     Analyse les diamètres de départ et les temps de croissance des bulles.
     Retourne un DataFrame avec les résultats et met à jour un fichier CSV.

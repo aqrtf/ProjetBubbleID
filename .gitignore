@@ -8,6 +8,8 @@ My_output/T113_2_75V2/**
 My_output/Test3/**
 My_output/Test0/**
 My_output/test50_frames/**
+My_output/**
+Inputs/**
 *.mp4
 *.pth
 *.png

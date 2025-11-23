@@ -1,6 +1,6 @@
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
-import cv2
+import cv2, importlib
 import os
 
 from csteDef import *
@@ -19,13 +19,13 @@ class BubbleIDGUI:
         self.thres_var = tk.DoubleVar(value=0.5)
         self.video_path_var = tk.StringVar()
         self.model_weights_var = tk.StringVar()
+        self.nFrameExtract_var = tk.IntVar(value=500)
         
         # Instance de DataAnalysis
         self.test120 = None
         
         # Liste des modèles disponibles
         self.available_models = [
-            "3classes_tip_jpeg",
             "model_all_jpeg", 
             "model_cav_jpeg",
             "model_tip_jpeg",
@@ -78,7 +78,7 @@ class BubbleIDGUI:
         ttk.Label(tracking_frame, text="Model Weights:").grid(row=1, column=0, sticky="w", pady=5)
         model_combo = ttk.Combobox(tracking_frame, textvariable=self.model_weights_var, values=self.available_models, width=37)
         model_combo.grid(row=1, column=1, columnspan=2, padx=5, pady=5, sticky="ew")
-        model_combo.set("3classes_tip_jpeg")
+        model_combo.set("model_all_jpeg")
         
         # Threshold
         ttk.Label(tracking_frame, text="Threshold:").grid(row=2, column=0, sticky="w", pady=5)
@@ -86,6 +86,10 @@ class BubbleIDGUI:
         threshold_frame.grid(row=2, column=1, columnspan=2, padx=5, pady=5, sticky="ew")
         ttk.Scale(threshold_frame, from_=0.1, to=1.0, variable=self.thres_var, orient=tk.HORIZONTAL, length=150).pack(side=tk.LEFT)
         ttk.Label(threshold_frame, textvariable=self.thres_var, width=4).pack(side=tk.LEFT, padx=5)
+
+        # Extension
+        ttk.Label(file_frame, text="Max extract frame:").grid(row=3, column=0, sticky="w", pady=5)
+        ttk.Entry(file_frame, textvariable=self.nFrameExtract_var, width=10).grid(row=1, column=1, padx=5, pady=5)
         
         # Boutons Tracking
         tracking_buttons = [
@@ -227,7 +231,7 @@ class BubbleIDGUI:
         
         self.update_status("Trimming video...")
         try:
-            self.test120.trimVideo(N_frames_extr=100)
+            self.test120.trimVideo(N_frames_extr=self.nFrameExtract_var.get())
             self.log_message("Video trimmed successfully")
             self.update_status("Ready")
         except Exception as e:
@@ -272,7 +276,7 @@ class BubbleIDGUI:
         
         self.update_status("Creating tracked video...")
         try:
-            self.test120.make_tracked_video(n_frames=100, fps=5, score_thres=0.7)
+            self.test120.make_tracked_video(n_frames=self.nFrameExtract_var.get(), fps=5, score_thres=0.7)
             self.log_message("Tracked video created successfully")
             self.update_status("Ready")
         except Exception as e:
@@ -307,6 +311,7 @@ class BubbleIDGUI:
         self.update_status("Finding merges...")
         try:
             import BubbleID_dependencies.parentBubble as parentBubble
+            parentBubble = importlib.reload(parentBubble)
             parentBubble.findMerge(self.save_folder_var.get(), self.extension_var.get())
             self.log_message("Merge finding completed")
             self.update_status("Ready")
@@ -316,6 +321,7 @@ class BubbleIDGUI:
         self.update_status("Finding evolution of track ID...")
         try:
             import BubbleID_dependencies.evolution_tid as evolution_tid
+            evolution_tid = importlib.reload(evolution_tid)
             evolution_tid.evolution_tid(self.save_folder_var.get(), self.extension_var.get(), score_thres=0.7)
             self.log_message("Evolution completed")
             self.update_status("Ready")
@@ -330,6 +336,7 @@ class BubbleIDGUI:
         self.update_status("Computing dwell time...")
         try:
             import BubbleID_dependencies.computedwell as computedwell
+            computedwell = importlib.reload(computedwell)
             computedwell.analyze_dwell_time(self.save_folder_var.get(), self.extension_var.get())
             
             self.log_message("Dwell time computed successfully")
@@ -345,6 +352,7 @@ class BubbleIDGUI:
         try:
             # À adapter selon votre méthode réelle
             import departureDiameter 
+            departureDiameter = importlib.reload(departureDiameter)
             departureDiameter.ComputeDepartureDiameter(self.save_folder_var.get(), self.extension_var.get())
             self.log_message("Departure diameter calculation completed")
             self.update_status("Ready")
