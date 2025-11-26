@@ -45,7 +45,8 @@ from matplotlib.patches import Rectangle
 
 # Create figure and Axes
 fig, ax = plt.subplots(1)
-for c in chip:
+color = ['r', 'g', 'b']
+for i, c in enumerate(chip):
     df = pd.read_csv(os.path.join(path, c+"_out\mainProperties.csv"))
     # Number of data points
     n = len(df)
@@ -61,6 +62,6 @@ for c in chip:
     yerr = np.vstack([yerr, yerr])
 
     # Call function to create error boxes
-    _ = make_error_boxes(ax, x, y, xerr, yerr)
+    _ = make_error_boxes(ax, x, y, xerr, yerr, facecolor=color[i])
 plt.legend(chip)
 plt.show()
