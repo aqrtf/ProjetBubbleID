@@ -1,4 +1,4 @@
-import os, csv, ast
+import os, csv, ast, json
 import numpy as np, pandas as pd
 from csteDef import *
 
@@ -73,7 +73,7 @@ def mainProperties(savefolder, extension,
     from BubbleID_dependencies.velocities import bubble_velocities
     attach_vel, detach_vel = bubble_velocities(savefolder, extension,
                                                minPointForVelocity=2, fps=fps)
-
+    
     # Construction du DataFrame résultat
     results = pd.DataFrame([{
         "chip": chipName,
@@ -91,5 +91,12 @@ def mainProperties(savefolder, extension,
 
     # Sauvegarde dans le CSV (append)
     results.to_csv(out_csv, mode="a", header=not os.path.exists(out_csv), index=False)
+
+    dict_json = {"attachV": [arr.tolist() for arr in attach_vel.vy_mm],
+                 "detachV": [arr.tolist() for arr in detach_vel.vy_mm]}
+    # Sauvegarde avec indentation
+    outJsonPath = os.path.join(savefolder, f"velocities_{extension}.json")
+    with open(outJsonPath, "w", encoding="utf-8") as f:
+        json.dump(dict_json, f, indent=4, ensure_ascii=False)
 
     return results
