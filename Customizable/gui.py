@@ -11,15 +11,43 @@ class BubbleIDGUI:
     def __init__(self, root):
         self.root = root
         self.root.title("BubbleID Analysis Tool")
-        self.root.geometry("700x800")
+        self.root.geometry("750x700")
         
         # Variables pour stocker les paramètres
         self.save_folder_var = tk.StringVar()
         self.extension_var = tk.StringVar()
-        self.thres_var = tk.DoubleVar(value=0.5)
         self.video_path_var = tk.StringVar()
         self.model_weights_var = tk.StringVar()
+        self.thres_var = tk.DoubleVar(value=0.5)
         self.nFrameExtract_var = tk.IntVar(value=500)
+        self.chipWidth_var = tk.DoubleVar(value=20.0)
+        self.iouThresh_var = tk.DoubleVar(value=0.5)
+        self.fps_var = tk.IntVar(value=4000)
+        self.scoreThres_var = tk.DoubleVar(value=0.7)
+        self.overlapTresh_var = tk.DoubleVar(value=0.1)
+        self.minOverlapSame_var = tk.DoubleVar(value=0.7)
+        self.postFusionFrames_var = tk.IntVar(value=2)
+        self.nFramePreviousDisappear_var = tk.IntVar(value=3)
+        self.nFramePostDisappear_var = tk.IntVar(value=2)
+        self.dilateIter_var = tk.IntVar(value=1)
+        
+        
+        
+        # Liste des paramètres (clé, variable)
+        self.parameters = [
+            ("Threshold", self.thres_var),
+            ("Max Frames", self.nFrameExtract_var),
+            ("Chip Width (mm)", self.chipWidth_var),
+            ("IOU Threshold", self.iouThresh_var),
+            ("FPS", self.fps_var),
+            ("Score Threshold", self.scoreThres_var),
+            ("Overlap Threshold", self.overlapTresh_var),
+            ("Min Overlap Same", self.minOverlapSame_var),
+            ("Post Fusion Frames", self.postFusionFrames_var),
+            ("N Frames Previous Disappear", self.nFramePreviousDisappear_var),
+            ("N Frames Post Disappear", self.nFramePostDisappear_var),
+            ("Dilate Iterations", self.dilateIter_var)
+        ]
         
         # Instance de DataAnalysis
         self.test120 = None
@@ -36,7 +64,89 @@ class BubbleIDGUI:
         ]
         
         self.setup_ui()
+    def setup_ui(self):
+        style = ttk.Style()
+        style.configure("TFrame", padding=10)
+        style.configure("TLabel", padding=5)
+        style.configure("TButton", padding=5)
+
+        main_frame = ttk.Frame(self.root)
+        main_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=10)
+
+        # --- FILE BANDEAU ---
+        file_frame = ttk.LabelFrame(main_frame, text="File", padding=10)
+        file_frame.pack(fill=tk.X, pady=1)
+
+        ttk.Label(file_frame, text="Save Folder:").grid(row=0, column=0, sticky="w")
+        ttk.Entry(file_frame, textvariable=self.save_folder_var, width=30).grid(row=0, column=1, padx=5)
+        ttk.Button(file_frame, text="Browse", command=self.browse_save_folder).grid(row=0, column=2, padx=5)
+
+        ttk.Label(file_frame, text="Extension:").grid(row=0, column=3, sticky="w")
+        ttk.Entry(file_frame, textvariable=self.extension_var, width=20).grid(row=0, column=4, padx=5)
         
+        ttk.Label(file_frame, text="Video path (for tracking):").grid(row=1, column=0, sticky="w")
+        ttk.Entry(file_frame, textvariable=self.video_path_var, width=30).grid(row=1, column=1, padx=5)
+        ttk.Button(file_frame, text="Browse", command=self.browse_save_folder).grid(row=1, column=2, padx=5)
+        
+        ttk.Label(file_frame, text="Model:").grid(row=1, column=3, sticky="w")
+        model_combo = ttk.Combobox(file_frame, textvariable=self.model_weights_var, values=self.available_models, width=17)
+        model_combo.grid(row=1, column=4, columnspan=2, padx=5, pady=5, sticky="ew")
+        model_combo.set("model_all_jpeg")
+
+        # --- PARAMETRES ---
+        params_frame = ttk.LabelFrame(main_frame, text="Parameters", padding=10)
+        params_frame.pack(fill=tk.X, pady=1)
+
+        # Génération automatique des champs
+        for i, (label, var) in enumerate(self.parameters):
+            ncol = 3
+            irow = i//ncol
+            icol = i%ncol
+            ttk.Label(params_frame, text=label).grid(row=irow, column=icol*2, sticky="w", pady=5)
+            ttk.Entry(params_frame, textvariable=var, width=10).grid(row=irow, column=2*icol+1, padx=5, pady=5)
+
+        # --- 3 COLONNES ---
+        columns_frame = ttk.Frame(main_frame)
+        columns_frame.pack(fill=tk.BOTH, expand=True, pady=1)
+
+        # Tracking
+        tracking_frame = ttk.LabelFrame(columns_frame, text="Tracking", padding=10)
+        tracking_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5)
+
+        tracking_buttons = [
+            ("Initialize Data", self.initialize_data_analysis),
+            ("Trim Video", self.trim_video),
+            ("Set Scale", self.set_scale),
+            ("Generate Data", self.generate_data),
+            ("Tracked Video", self.tracked_video),
+            ("Run All Tracking", self.run_all_tracking)
+        ]
+        for text, cmd in tracking_buttons:
+            ttk.Button(tracking_frame, text=text, command=cmd).pack(fill=tk.X, pady=5)
+
+        # Postprocessing
+        postprocess_frame = ttk.LabelFrame(columns_frame, text="Post Process", padding=10)
+        postprocess_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5)
+
+        postprocess_buttons = [
+            ("Find Merge", self.find_merge),
+            ("Compute Dwell", self.compute_dwell),
+            ("Departure Diameter", self.departure_diameter),
+            ("Calc Bubble Properties", self.calc_bubble_properties),
+        ]
+        for text, cmd in postprocess_buttons:
+            ttk.Button(postprocess_frame, text=text, command=cmd).pack(fill=tk.X, pady=5)
+
+        # Logs
+        log_frame = ttk.LabelFrame(columns_frame, text="Logs", padding=10)
+        log_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5)
+
+        self.log_text = tk.Text(log_frame, height=20, width=40)
+        scrollbar = ttk.Scrollbar(log_frame, orient=tk.VERTICAL, command=self.log_text.yview)
+        self.log_text.configure(yscrollcommand=scrollbar.set)
+        self.log_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+    """    
     def setup_ui(self):
         # Style
         style = ttk.Style()
@@ -138,6 +248,7 @@ class BubbleIDGUI:
         self.status_var = tk.StringVar(value="Ready")
         status_bar = ttk.Label(main_frame, textvariable=self.status_var, relief=tk.SUNKEN)
         status_bar.pack(fill=tk.X, pady=5)
+    """
     
     def log_message(self, message):
         """Ajoute un message aux logs"""
@@ -311,8 +422,15 @@ class BubbleIDGUI:
         self.update_status("Finding merges...")
         try:
             import BubbleID_dependencies.parentBubble as parentBubble
-            parentBubble = importlib.reload(parentBubble)
-            parentBubble.findMerge(self.save_folder_var.get(), self.extension_var.get())
+            # parentBubble = importlib.reload(parentBubble)
+            parentBubble.findMerge(self.save_folder_var.get(), self.extension_var.get(),
+                                   score_thres=self.scoreThres_var.get(),
+                                   OVERLAP_THRESH=self.overlapTresh_var.get(),
+                                   MIN_OVERLAP_SAME=self.minOverlapSame_var.get(),
+                                   POST_FUSION_FRAMES=self.postFusionFrames_var.get(),
+                                   N_FRAMES_PREVIOUS_DISAPPEAR=self.nFramePreviousDisappear_var.get(),
+                                   N_FRAMES_POST_DISAPPEAR=self.nFramePostDisappear_var.get(),
+                                   DILATE_ITERS=self.dilateIter_var.get())
             self.log_message("Merge finding completed")
             self.update_status("Ready")
         except Exception as e:
@@ -321,8 +439,8 @@ class BubbleIDGUI:
         self.update_status("Finding evolution of track ID...")
         try:
             import BubbleID_dependencies.evolution_tid as evolution_tid
-            evolution_tid = importlib.reload(evolution_tid)
-            evolution_tid.evolution_tid(self.save_folder_var.get(), self.extension_var.get(), score_thres=0.7)
+            # evolution_tid = importlib.reload(evolution_tid)
+            evolution_tid.evolution_tid(self.save_folder_var.get(), self.extension_var.get(), score_thres=self.scoreThres_var.get())
             self.log_message("Evolution completed")
             self.update_status("Ready")
             
@@ -336,8 +454,11 @@ class BubbleIDGUI:
         self.update_status("Computing dwell time...")
         try:
             import BubbleID_dependencies.computedwell as computedwell
-            computedwell = importlib.reload(computedwell)
-            computedwell.analyze_dwell_time(self.save_folder_var.get(), self.extension_var.get())
+            # computedwell = importlib.reload(computedwell)
+            computedwell.analyze_dwell_time(self.save_folder_var.get(), self.extension_var.get(),
+                                            score_thres=self.scoreThres_var.get(),
+                                            n_frames_post_disappear=self.nFramePostDisappear_var.get(),
+                                            fps=self.fps_var.get())
             
             self.log_message("Dwell time computed successfully")
             self.update_status("Ready")
@@ -352,7 +473,7 @@ class BubbleIDGUI:
         try:
             # À adapter selon votre méthode réelle
             import departureDiameter 
-            departureDiameter = importlib.reload(departureDiameter)
+            # departureDiameter = importlib.reload(departureDiameter)
             departureDiameter.ComputeDepartureDiameter(self.save_folder_var.get(), self.extension_var.get())
             self.log_message("Departure diameter calculation completed")
             self.update_status("Ready")
