@@ -151,6 +151,44 @@ def bulle_changement(data_by_frame):
     # print(bulleApparue)
     return bulleDisparue, bulleApparue
 
+def get_masks_and_frames(data_by_frame, track_id):
+    masksArea = []
+    frames = []
+    for frame, tracks in data_by_frame.items():
+        if track_id in tracks:
+            masksArea.append(mask_area(tracks[track_id]))
+            frames.append(frame)
+    return masksArea, frames
+
+def bulle_croissance_rapide(data_by_frame):
+    result = []
+    # on prend les track id unique sous forme de liste
+    unique_tracks = list({tid for tracks in data_by_frame.values() for tid in tracks.keys()})
+    #pour chaque tid on sort une liste des frames et des aires du mask
+    for tid in unique_tracks:
+        masksArea, frames = get_masks_and_frames(data_by_frame, tid)
+        masksArea = np.array(masksArea)
+        if masksArea.size>2:
+            croissanceVelocity = np.diff(masksArea)/np.diff(frames)
+            # NOTE choisir un threshold justifie et visible
+            if croissanceVelocity.max() > 50 * np.median(croissanceVelocity[croissanceVelocity>0]): # TODO mettre le facteur en variable
+                # il s'agit peut etre d'un merge non detecte car il n'y a pas de chgmt de tid
+                idx_max = croissanceVelocity.argmax() + 2 # le +2 vient car les frames commence a 1 et le diff
+                frameMerge = frames[idx_max]
+                mask1 = data_by_frame[frameMerge][tid]
+                # NOTE pour l'instant on considere que le petit parent est tjrs visible sur la frame
+                for tid2, mask2 in data_by_frame[frameMerge].items():
+                    # si une des bulles presentes est recouverte par la bulle alors c'est un merge
+                    # TODO parfois il y a une oscillation du recouvrement
+                    if tid != tid2:
+                        if overlap_ratio(mask1, mask2, 'smallest') > 0.9:
+                            print(frameMerge, tid, tid2)
+                            result.append({"frame": frameMerge, "child": tid, "parent1": tid, "parent2": tid2})
+    return result
+
+
+
+
 
 def filtrer_parents_par_intersection(parents_ids, frame_parents, masques_dict, min_overlap_same):
     """
@@ -209,7 +247,7 @@ def filtrer_parents_par_intersection(parents_ids, frame_parents, masques_dict, m
     return parents_ids
 
 
-def my_detect_fusion(json_path, csv_path, outputFile, N_FRAMES_PREVIOUS_DISAPPEAR, N_FRAMES_POST_DISAPPEAR, POST_FUSION_FRAMES, OVERLAP_THRESH, score_thresh=.7, min_overlap_same=.7, image_shape=(1024,1024), dilate_iters=0):
+def my_detect_fusion(data_by_frame, outputFile, N_FRAMES_PREVIOUS_DISAPPEAR, N_FRAMES_POST_DISAPPEAR, POST_FUSION_FRAMES, OVERLAP_THRESH, min_overlap_same=.7):
     """
     Détecte les fusions de bulles en analysant les chevauchements temporels entre frames.
     
@@ -233,8 +271,7 @@ def my_detect_fusion(json_path, csv_path, outputFile, N_FRAMES_PREVIOUS_DISAPPEA
     Returns:
         dict: {frame: {new_track_id: [parent_ids]}} Dictionnaire des fusions détectées
     """
-    # Construit l'index des masques par frame
-    data_by_frame = build_masks_and_index(json_path, csv_path, image_shape, score_thresh, dilate_iters)
+    
     bulleDisparue, bulleApparue = bulle_changement(data_by_frame)
     frames = sorted(data_by_frame.keys())  # Liste triée des frames disponibles
 
@@ -349,7 +386,7 @@ def my_detect_fusion(json_path, csv_path, outputFile, N_FRAMES_PREVIOUS_DISAPPEA
     return parentsDict_clean2
 
 
-def track_id_changes(json_path, csv_path, outputFile, N_FRAMES_PREVIOUS_DISAPPEAR, score_thresh, MIN_OVERLAP_SAME, existing_fusions=None, image_shape=(1024,1024), dilate_iters=0):
+def track_id_changes(data_by_frame, outputFile, N_FRAMES_PREVIOUS_DISAPPEAR, MIN_OVERLAP_SAME, existing_fusions=None):
     """
     Détecte les changements simples de track_id où une bulle conserve sa position mais change d'identifiant.
     
@@ -375,7 +412,6 @@ def track_id_changes(json_path, csv_path, outputFile, N_FRAMES_PREVIOUS_DISAPPEA
         et un seul parent est autorisé par changement de track_id.
     """
     # Construit l'index des masques par frame
-    data_by_frame = build_masks_and_index(json_path, csv_path, image_shape, score_thresh, dilate_iters)
     bulleDisparue, bulleApparue = bulle_changement(data_by_frame)
     frames = sorted(data_by_frame.keys())
 
@@ -515,7 +551,7 @@ def track_id_changes(json_path, csv_path, outputFile, N_FRAMES_PREVIOUS_DISAPPEA
     return parentsList_return
 
 
-def exportData(fusionDict, changeIDList, changeIDList_all, savefolder, extension):
+def exportData(fusionDict, fusionWithoutDisappear, changeIDList, changeIDList_all, savefolder, extension):
     # on remplace fusionDict en un dataframe
     rows = []
     for frame, tracks in fusionDict.items():
@@ -525,6 +561,8 @@ def exportData(fusionDict, changeIDList, changeIDList_all, savefolder, extension
             if len(parents) > 2:
                 print(f"WARNING: bubble {child} (frame {frame}) has more than 2 parents")
             rows.append({"frame": frame, "child": child, "parent1": parent1, "parent2": parent2})
+    for r in fusionWithoutDisappear:
+        rows.append(r)
     df_fusion = pd.DataFrame(rows)
     out_csv = os.path.join(savefolder, f'fusionResult_{extension}.csv')
     df_fusion.to_csv(out_csv, index=False)
@@ -537,6 +575,47 @@ def exportData(fusionDict, changeIDList, changeIDList_all, savefolder, extension
     out_csv = os.path.join(savefolder, f'changeIDResultAll_{extension}.csv')
     df_changeID.to_csv(out_csv, index=False)
 
+
+def clean_change_id_list(changeIDList):
+    """
+    Nettoie une liste de changements d'ID.
+    
+    - Supprime les cas où old == new.
+    - Si on a x->y puis y->x, on ne garde pas le deuxième
+      car on veut remplacer tous les y par x dans le reste.
+    
+    Parameters
+    ----------
+    changeIDList : list of list/tuple
+        Chaque élément doit être de la forme [index, old_id, new_id].
+    
+    Returns
+    -------
+    list
+        La liste nettoyée des changements.
+    """
+    changeIDList_all = copy.deepcopy(changeIDList)
+    changeIDList_clean = []
+    
+    for idx in range(len(changeIDList_all)):
+        old_id = changeIDList_all[idx][1]
+        new_id = changeIDList_all[idx][2]
+        
+        # ignorer si old == new
+        if old_id == new_id:
+            continue
+        
+        # garder ce changement
+        changeIDList_clean.append(changeIDList_all[idx])
+        
+        # propager la substitution dans les changements suivants
+        for j in range(idx+1, len(changeIDList_all)):
+            if changeIDList_all[j][1] == old_id:
+                changeIDList_all[j][1] = new_id
+            if changeIDList_all[j][2] == old_id:
+                changeIDList_all[j][2] = new_id
+    
+    return changeIDList_clean
 
 
 # ------------------------
@@ -601,6 +680,9 @@ def findMerge(dataFolder, extension, score_thres=0.7, OVERLAP_THRESH=0.1,
     richFile = os.path.join(dataFolder, f"rich_{extension}.csv")
     outputFileHistoryPath = os.path.join(dataFolder, f"fusionHistory_{extension}.txt")
     
+    # Construit l'index des masques par frame
+    data_by_frame = build_masks_and_index(contourFile, richFile, IMAGE_SHAPE, score_thres, DILATE_ITERS)
+
     # Lance la détection des fusions
     with open(outputFileHistoryPath, 'w') as f:
         # Écriture des paramètres utilisés
@@ -615,42 +697,27 @@ def findMerge(dataFolder, extension, score_thres=0.7, OVERLAP_THRESH=0.1,
         f.write(f"\tMIN_OVERLAP_SAME = {MIN_OVERLAP_SAME}\n")
         f.write("="*60 + "\n")
         
-        fusionDict = my_detect_fusion(contourFile,
-                                      richFile,
+        fusionDict = my_detect_fusion(data_by_frame,
                                       f,
                                       N_FRAMES_PREVIOUS_DISAPPEAR,
                                       N_FRAMES_POST_DISAPPEAR,
                                       POST_FUSION_FRAMES,
                                       OVERLAP_THRESH,
-                                      score_thres,
-                                      MIN_OVERLAP_SAME,
-                                      IMAGE_SHAPE,
-                                      dilate_iters=DILATE_ITERS)
+                                      MIN_OVERLAP_SAME)
         
-        changeIDList = track_id_changes(contourFile,
-                                        richFile,
+        changeIDList = track_id_changes(data_by_frame,
                                         f,
                                         N_FRAMES_PREVIOUS_DISAPPEAR,
-                                        score_thres, MIN_OVERLAP_SAME,
-                                        existing_fusions=fusionDict,
-                                        image_shape=IMAGE_SHAPE,
-                                        dilate_iters=DILATE_ITERS)
-    changeIDList_all = copy.deepcopy(changeIDList)
-    # Si x->y puis y->x il ne faut pas garder le deuxieme puisque on veut changer tous les y en x dans le reste
-    changeIDList_clean = []
-    for idx in range(len(changeIDList)):
-        if changeIDList[idx][1] == changeIDList[idx][2]: #old and new equal
-            continue
-        changeIDList_clean.append(changeIDList[idx])
-        for j in range(idx+1, len(changeIDList)):
-            if changeIDList[j][1] == changeIDList[idx][1]:
-                changeIDList[j][1] = changeIDList[idx][2]
-            if changeIDList[j][2] == changeIDList[idx][1]:
-                changeIDList[j][2] = changeIDList[idx][2]
+                                        MIN_OVERLAP_SAME,
+                                        existing_fusions=fusionDict)
+        
+        fusionWithoutDisappear = bulle_croissance_rapide(data_by_frame)
+
+    changeIDList_clean = clean_change_id_list(changeIDList)
             
       
     # Export des résultats finaux
-    exportData(fusionDict, changeIDList_clean, changeIDList_all, dataFolder, extension)
+    exportData(fusionDict, fusionWithoutDisappear, changeIDList_clean, changeIDList, dataFolder, extension)
     
     return fusionDict, changeIDList_clean
 
@@ -660,4 +727,4 @@ def findMerge(dataFolder, extension, score_thres=0.7, OVERLAP_THRESH=0.1,
 # extension="T113_2_60V_2" 
 # # dataFolder = "My_output/Test6/"
 # # extension = "Test6"
-# findMerge("My_output/Test6", "Test6")
+findMerge("My_output/Test7", "LatMerge")

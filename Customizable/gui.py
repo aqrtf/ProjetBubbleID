@@ -86,7 +86,7 @@ class BubbleIDGUI:
         
         ttk.Label(file_frame, text="Video path (for tracking):").grid(row=1, column=0, sticky="w")
         ttk.Entry(file_frame, textvariable=self.video_path_var, width=30).grid(row=1, column=1, padx=5)
-        ttk.Button(file_frame, text="Browse", command=self.browse_save_folder).grid(row=1, column=2, padx=5)
+        ttk.Button(file_frame, text="Browse", command=self.browse_video_path).grid(row=1, column=2, padx=5)
         
         ttk.Label(file_frame, text="Model:").grid(row=1, column=3, sticky="w")
         model_combo = ttk.Combobox(file_frame, textvariable=self.model_weights_var, values=self.available_models, width=17)
@@ -146,6 +146,11 @@ class BubbleIDGUI:
         self.log_text.configure(yscrollcommand=scrollbar.set)
         self.log_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+        # Status bar
+        self.status_var = tk.StringVar(value="Ready")
+        status_bar = ttk.Label(main_frame, textvariable=self.status_var, relief=tk.SUNKEN)
+        status_bar.pack(fill=tk.X, pady=5)
     """    
     def setup_ui(self):
         # Style
