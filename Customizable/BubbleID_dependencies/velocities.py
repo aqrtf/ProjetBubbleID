@@ -87,14 +87,25 @@ def compute_speed_blocks(frames0, track_ids, labels, contours, rich_df,
         dt = np.diff(t)
         vy = - dy / dt  # origine en haut à gauche
 
+        # On retire les vitesse negative
+        dypos = dy[dy<0]
+        if dypos.size <minPointForVelocity:
+            continue
+        dxpos = dx[dy<0]
+        newt = t[1:]
+        tpos = newt[dy<0]
+        dtpos = np.diff(tpos)
+        
+        vypos = - dypos[1:]/dtpos
+
         if label == ATTACHED:
-            attach_vel.vy.append(vy)
-            attach_vel.dx.append(dx)
-            attach_vel.sizeBlock.append(vy.size)
+            attach_vel.vy.append(vypos)
+            attach_vel.dx.append(dxpos)
+            attach_vel.sizeBlock.append(vypos.size)
         else:
-            detach_vel.vy.append(vy)
-            detach_vel.dx.append(dx)
-            detach_vel.sizeBlock.append(vy.size)
+            detach_vel.vy.append(vypos)
+            detach_vel.dx.append(dxpos)
+            detach_vel.sizeBlock.append(vypos.size)
 
 
 def bubble_velocities(savefolder, extension, minPointForVelocity=2, fps=4000):
