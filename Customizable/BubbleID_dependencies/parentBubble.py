@@ -187,7 +187,7 @@ def bulle_croissance_rapide(data_by_frame):
     return result
 
 
-
+# TODO Parfois les bulles merge dans un tres grosse rapidement et on ne detecte pas le merge car la grosse n'est pas modifiee 
 
 
 def filtrer_parents_par_intersection(parents_ids, frame_parents, masques_dict, min_overlap_same):
