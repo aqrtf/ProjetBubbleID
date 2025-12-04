@@ -299,7 +299,9 @@ def ComputeDepartureDiameter(savefolder, extension,
                 "conf_dep_last_attached_pct": np.nan, 
                 "conf_dep_first_detached_pct": np.nan,
                 "conf_dep_mean_pct": np.nan,
-                "birth": None,
+                "firstArea": None,
+                "firstX": None,
+                "dwellFrame": None
             }
             # Initialisation de tous les diamètres à NaN
             for m, _ in methods:
@@ -310,13 +312,11 @@ def ComputeDepartureDiameter(savefolder, extension,
             rows_out.append(base)
             continue
         
-        # Est ce qu'on voit la naissance de la bulle
-        # On suppose que si on voit la bulle dans les premieres frame de la video alors elle n'est pas nouvelle
-        # TODO mettre une condition sur la taille ???? 
-        if set(range(0, tolerance_frame)) & set(frames0): # or DETACHED in labels[0:TOLERANCE_FRAME]: # pas sur de l'interet de la 2eme condition
-            birth = False
-        else:
-            birth = True
+        # Aire de la premiere apparition de la bulle
+        firstArea = df[(df["frame0"]==frames0[0]) & (df["track_id"] == tid[frames0[0]])].iloc[0].at["area_px"]
+        firstX = df[(df["frame0"]==frames0[0]) & (df["track_id"] == tid[frames0[0]])].iloc[0].at["cx_px"]
+        
+
 
         # RECHERCHE DU DÉTACHEMENT POUR CETTE BULLE
         attach_start, attach_end_i, last_attached, detach_frame, fr_s = _find_departure(frames0, labels)
@@ -334,7 +334,9 @@ def ComputeDepartureDiameter(savefolder, extension,
                 "conf_dep_last_attached_pct": np.nan, 
                 "conf_dep_first_detached_pct": np.nan,
                 "conf_dep_mean_pct": np.nan,
-                "birth": birth
+                "firstArea": firstArea,
+                "firstX": firstX,
+                "dwellFrame": None
             }
             for m, _ in methods:
                 base[f"D_{m}_px_discr"] = np.nan
@@ -404,7 +406,9 @@ def ComputeDepartureDiameter(savefolder, extension,
             "note": "ok" if detach_frame is not None else "no_detach_found",
             "k": k, 
             "fit_kind": fit_kind,
-            "birth": birth
+            "firstArea": firstArea,
+            "firstX": firstX,
+            "dwellFrame": ((int(detach_frame)+int(last_attached)+1)/2 - int(attach_start)) if detach_frame is not None else None
         }
 
         # =============================================================================
@@ -478,8 +482,8 @@ def ComputeDepartureDiameter(savefolder, extension,
     
     # DÉFINITION DES COLONNES DU CSV DE SORTIE
     cols_head = [
-        "bubble_id", "attach_start_frame", "last_attached_frame", "detach_frame", 
-        "note", "birth", "k", "fit_kind", "conf_dep_last_attached_pct", 
+        "bubble_id", "attach_start_frame", "last_attached_frame", "detach_frame", "dwellFrame", 
+        "note", "firstArea", "firstX", "k", "fit_kind", "conf_dep_last_attached_pct", 
         "conf_dep_first_detached_pct", "conf_dep_mean_pct"
     ]
     
@@ -508,3 +512,4 @@ def ComputeDepartureDiameter(savefolder, extension,
     print(f"[ComputeDepartureDiameter] salvato: {out_csv}")
     return rows_out
 
+ComputeDepartureDiameter(r"Results\T87\T87_out", "T87_50V1")

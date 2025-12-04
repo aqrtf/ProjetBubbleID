@@ -2,7 +2,7 @@ import os, csv, ast, json
 import numpy as np, pandas as pd
 from csteDef import *
 
-
+ 
 # Liste des méthodes valides pour le calcul du diamètre
 valid_methods = {"area", "feret_max", "feret_min", "ell_maj", "ell_min", "perim", "mix"}
 
@@ -10,11 +10,17 @@ valid_methods = {"area", "feret_max", "feret_min", "ell_maj", "ell_min", "perim"
 def mainProperties(savefolder, extension,
                       diameterMethod=["mix"],
                       interp=True,
-                      chipName="T", tension=50, 
-                      fps=4000, min_attach_frame=4): # TODO chipname/ tension
+                      chipName="T2", tension=50, 
+                      fps=4000, min_attach_frame=4,
+                      maxBirthSize = 3000,
+                      xCenter = [512-15, 512+15],
+                      xEdge = [224, 1024-224]): # TODO chipname/ tension
     """
     Analyse les diamètres de départ et les temps de croissance des bulles.
     Retourne un DataFrame avec les résultats et met à jour un fichier CSV.
+    
+    maxBirthSize:  Taille maximale (en pixels carrés) pour considérer une bulle comme 'nouvelle' si elle apparaît après les premiers frames
+
     """
 
     # Vérifier que toutes les méthodes sont valides
@@ -46,16 +52,21 @@ def mainProperties(savefolder, extension,
 
     # Parcours des bulles
     for bubble in df_depart.itertuples():
-        if bubble.detach_frame is not None:
-            n_attach_frame = (bubble.detach_frame - bubble.attach_start_frame + 1)
+        if bubble.note == "ok":
+            n_attach_frame = ((bubble.last_attached_frame+1 + bubble.detach_frame)/2 - bubble.attach_start_frame + 1)
             if n_attach_frame >= min_attach_frame:
                 # La bulle se détache, ce n'est pas une erreur
                 # Extraction du diamètre de départ
                 departDiameters.append(df_depart[colonnes].mean(axis=1))
 
-                if bubble.birth:
+                if (bubble.firstArea < maxBirthSize) and (bubble.attach_start_frame > 1) :
                     # On a toute la croissance de la bulle
-                    growingTimes.append(n_attach_frame / fps)
+                    if (xCenter[0] < bubble.firstX < xCenter[1]) or (bubble.firstX < xEdge[0]) or (bubble.firstX > xEdge[1]):
+                        # La bulle est centrée, on l'exclu car il y a interference avec les bulle devant
+                        # pareil si elle est proche des bords
+                        growingTimes.append(np.nan)
+                    else:
+                        growingTimes.append(n_attach_frame / fps)
                 else:
                     growingTimes.append(np.nan)
 
@@ -100,3 +111,5 @@ def mainProperties(savefolder, extension,
         json.dump(dict_json, f, indent=4, ensure_ascii=False)
 
     return results
+
+mainProperties(r"Results\T87\T87_out", "T87_50V1")
