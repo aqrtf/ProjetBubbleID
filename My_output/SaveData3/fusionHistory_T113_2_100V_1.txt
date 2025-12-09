@@ -1,13 +1,13 @@
 PARAMETERS:
+	IMAGE_SHAPE = (1024, 1024)
 	DILATE_ITERS = 1
 	OVERLAP_THRESH = 0.1
 	POST_FUSION_FRAMES = 2
 	N_FRAMES_PREVIOUS_DISAPPEAR = 3
 	N_FRAMES_POST_DISAPPEAR = 2
 	score_thres = 0.7
-	MAX_OVERLAP_PARENTS = 0.7
-
-##########################################################
+	MIN_OVERLAP_SAME = 0.7
+============================================================
 Frame 3:
 	1 new bubbles: [7]
 	Bubbles disappear btw frame 0 and 5:
@@ -509,34 +509,90 @@ Frame 100:
 		Frame 98: [38]
 		Frame 99: [18, 31]
 ##########################################################
-Results before cleaning:
-	Frame   5:   9 <- [1]
-	Frame  10:  11 <- [6, 8, 10]
-	Frame  22:  11 <- [21]
-	Frame  25:   7 <- [24]
-	Frame  26:  11 <- [25]
-	Frame  28:   5 <- [27]
-	Frame  34:   7 <- [33]
-	Frame  38:  11 <- [36, 37]
-	Frame  39:   5 <- [38]
-	Frame  41:   4 <- [40]
-	Frame  43:   7 <- [39, 41]
-	Frame  46:   7 <- [45]
-	Frame  48:  11 <- [49]
-	Frame  51:   5 <- [52, 52]
-	Frame  72:  31 <- [72, 72]
-	Frame  77:  21 <- [76, 76]
-	Frame  86:  30 <- [82, 85, 87]
-	Frame  87:  18 <- [88]
-	Frame  91:  21 <- [89]
-	Frame  93:  35 <- [91]
-	Frame  94:  34 <- [91, 93]
+Results before cleaning: 21 fusions detect:
+	Frame   5:   9 <- [4]
+	Frame  10:  11 <- [6, 6, 7]
+	Frame  22:  11 <- [7]
+	Frame  25:   7 <- [11]
+	Frame  26:  11 <- [7]
+	Frame  28:   5 <- [8]
+	Frame  34:   7 <- [11]
+	Frame  38:  11 <- [7, 15]
+	Frame  39:   5 <- [4]
+	Frame  41:   4 <- [5]
+	Frame  43:   7 <- [11, 11]
+	Frame  46:   7 <- [11]
+	Frame  48:  11 <- [7]
+	Frame  51:   5 <- [0, 4]
+	Frame  72:  31 <- [25, 26]
+	Frame  77:  21 <- [34, 35]
+	Frame  86:  30 <- [18, 18, 18]
+	Frame  87:  18 <- [30]
+	Frame  91:  21 <- [35]
+	Frame  93:  35 <- [21]
+	Frame  94:  34 <- [21, 35]
 ##########################################################
 Cleaning:
 ##########################################################
-Results:
+Results: 5 fusions detect:
 	Frame  10:  11 <- [6, 7]
 	Frame  38:  11 <- [7, 15]
 	Frame  51:   5 <- [0, 4]
 	Frame  72:  31 <- [25, 26]
 	Frame  77:  21 <- [34, 35]
+
+##########################################################
+TRACK ID CHANGEMENTS
+##########################################################
+Results before cleaning: 20 potential changes detected:
+	Frame  10:  11 <- [6, 6]
+	Frame  21:   7 <- [11]
+	Frame  22:  11 <- [7]
+	Frame  25:   7 <- [11]
+	Frame  26:  11 <- [7]
+	Frame  31:   4 <- [5]
+	Frame  34:   4 <- [5]
+	Frame  34:   7 <- [11]
+	Frame  38:  11 <- [7]
+	Frame  39:   5 <- [4]
+	Frame  41:   4 <- [5]
+	Frame  43:   7 <- [11, 11]
+	Frame  45:  11 <- [7]
+	Frame  46:   7 <- [11]
+	Frame  48:  11 <- [7]
+	Frame  76:  35 <- [21]
+	Frame  77:  21 <- [35]
+	Frame  86:  30 <- [18, 18]
+	Frame  87:  18 <- [30]
+	Frame  89:  35 <- [21]
+	Frame  93:  35 <- [21]
+----CLEANING----
+Step 1: Removing duplicate parents (keeping latest frame):
+	Frame 10: 11 - removed duplicates, kept 1 parents from 2
+	Frame 43: 7 - removed duplicates, kept 1 parents from 2
+	Frame 86: 30 - removed duplicates, kept 1 parents from 2
+Step 2: Checking for multiple different parents (should be merges):
+Step 3: Excluding cases where fusion was detected:
+	Frame 10: 11 comes from a merge
+	Frame 38: 11 comes from a merge
+	Frame 77: 21 comes from a merge
+##########################################################
+Final results: 17 track changes detected:
+	Frame  21:   7 <- 11 (from frame 20)
+	Frame  22:  11 <- 7 (from frame 21)
+	Frame  25:   7 <- 11 (from frame 24)
+	Frame  26:  11 <- 7 (from frame 25)
+	Frame  31:   4 <- 5 (from frame 30)
+	Frame  34:   4 <- 5 (from frame 30)
+	Frame  34:   7 <- 11 (from frame 33)
+	Frame  39:   5 <- 4 (from frame 38)
+	Frame  41:   4 <- 5 (from frame 40)
+	Frame  43:   7 <- 11 (from frame 41)
+	Frame  45:  11 <- 7 (from frame 44)
+	Frame  46:   7 <- 11 (from frame 45)
+	Frame  48:  11 <- 7 (from frame 44)
+	Frame  76:  35 <- 21 (from frame 75)
+	Frame  86:  30 <- 18 (from frame 85)
+	Frame  87:  18 <- 30 (from frame 86)
+	Frame  89:  35 <- 21 (from frame 87)
+	Frame  93:  35 <- 21 (from frame 91)

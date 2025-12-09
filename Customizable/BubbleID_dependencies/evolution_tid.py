@@ -69,6 +69,7 @@ def evolution_tid(savefolder, extension, score_thres=0.7):
         
         # Initialize evolution tracking array
         evolution_tid = [None] * last_frame
+        mergeLocation = []
         first_seen_frame = track_data["frame"].min()
         last_seen_frame = track_data["frame"].max()
         evolution_tid[first_seen_frame-1] = track_id  # frame between 1 and last_frame
@@ -84,6 +85,7 @@ def evolution_tid(savefolder, extension, score_thres=0.7):
                 track_id = df_fusion.loc[mask, "child"].iat[0]
                 nameBubble += "=>" + str(track_id)
                 last_seen_frame = df_score.loc[df_score["track_id"] == track_id, "frame"].max()
+                mergeLocation.append(idx_frame)
 
             # Check if bubble changes ID at this frame
             mask = (changeID_df["frame"] == idx_frame) & ((changeID_df["old_id"] == track_id))
@@ -128,7 +130,8 @@ def evolution_tid(savefolder, extension, score_thres=0.7):
             "n_frames_tracked": n_frames_tracked,
             "missing_detection": missing_frame,
             "mean_score_pct": mean_score,
-            "chemin": evolution_tid
+            "chemin": evolution_tid,
+            "mergeFrame": mergeLocation,
         })
             
     # Convert results to DataFrame with proper data types
@@ -192,4 +195,4 @@ def evolution_tid(savefolder, extension, score_thres=0.7):
     print(f"Results saved to: {out_csv}")
     
     
-# evolution_tid(savefolder, extension, score_thres)
+# evolution_tid(r"Inputs\T87_out", "T87_60V1")

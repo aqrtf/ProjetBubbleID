@@ -10,7 +10,7 @@ def ComputeDepartureDiameter(savefolder, extension,
                                 fit_kind: str = "linear",
                                 tolerate_unknown_gap: int = 1,
                                 min_attached_run: int = 1,
-                                tolerance_frame = 3
+                                maxLostTrack = 10,
                                 ):
     """
     CALCULE LE DIAMETRE DE DEPART DES BULLES
@@ -71,6 +71,7 @@ def ComputeDepartureDiameter(savefolder, extension,
     
     df_evol = pd.read_csv(evolution_csv)
     tid_arr = df_evol["chemin"].apply(ast.literal_eval).to_list()
+    nbFrame = len(tid_arr[0])
     frames_arr = [[j for j, val in enumerate(row) if val is not None] for row in tid_arr]
     bubclass_arr = []
     for irow, row in enumerate(frames_arr):
@@ -78,6 +79,7 @@ def ComputeDepartureDiameter(savefolder, extension,
         for fr in row:
             x.append(int(df[(df["frame0"]==fr) & (df["track_id"] == tid_arr[irow][fr])].iloc[0].at["class_id"]))
         bubclass_arr.append(x)
+    mergeFrame_arr = df_evol["mergeFrame"].apply(ast.literal_eval).to_list()
 
 
     # =============================================================================
@@ -131,6 +133,8 @@ def ComputeDepartureDiameter(savefolder, extension,
         attach_start = None    # Premier frame attaché
         attach_end_i = None   # Index du dernier frame attaché
         run = 0               # Compteur de frames attachés consécutifs
+
+        lostTrack = np.diff(fr_s)
         
         # RECHERCHE DE LA SÉQUENCE ATTACHÉE
         for i, lab in enumerate(lb_s):
@@ -146,6 +150,13 @@ def ComputeDepartureDiameter(savefolder, extension,
                 attach_start = None
                 attach_end_i = None
                 run = 0
+            # # Trop delicat de trouver un bon nombre de maxLostTrack
+            # if i!=0 and lostTrack[i-1]>maxLostTrack:
+            #     # Si on perd de vue la bulle trop longtemps, on reset
+            #     attach_start = None 
+            #     attach_end_i = None  
+            #     run = 0              
+
                 
         # VÉRIFICATION: séquence attachée valide?
         if attach_start is None or run < min_attached_run:
@@ -254,6 +265,38 @@ def ComputeDepartureDiameter(savefolder, extension,
         except:
             return math.nan
 
+    def _mean_at(series, f_eval, labels, mergeFrame):
+        # f_eval: frame0 of the detachment
+        if f_eval is None or not series: 
+            return math.nan
+        dValues = []
+        dictSeries = dict(series)
+        while(1):
+            # on prend les diametre j'usqua un merge ou si la bulle se reattache puisque normalement il est constant
+            if f_eval in frames0:
+                idx_fr = frames0.index(f_eval)
+                if (labels[idx_fr] != DETACHED) and (f_eval not in mergeFrame):
+                    break
+                else:
+                    dValues.append(dictSeries[f_eval])
+            f_eval +=1
+            if f_eval > max(frames0):
+                break
+
+        # on retire les outliers (IQR method)
+        data = np.array(dValues)
+        Q1, Q3 = np.percentile(data, [25, 75])
+        IQR = Q3 - Q1
+
+        lower_bound = Q1 - 1.5 * IQR
+        upper_bound = Q3 + 1.5 * IQR
+
+        filtered_data = data[(data >= lower_bound) & (data <= upper_bound)]
+        dMean = filtered_data.mean()
+        return dMean
+        
+    
+
     # =============================================================================
     # SECTION 3: MÉTHODES DE CALCUL DU DIAMÈTRE
     # =============================================================================
@@ -289,6 +332,7 @@ def ComputeDepartureDiameter(savefolder, extension,
     for idx, tid in enumerate(tid_arr):
         frames0 = frames_arr[idx]
         labels = bubclass_arr[idx]
+        mergeFrame = mergeFrame_arr[idx]
         
         # CAS 1: BULLE SANS FRAMES → DONNÉES MANQUANTES
         if not frames0:
@@ -316,14 +360,14 @@ def ComputeDepartureDiameter(savefolder, extension,
             rows_out.append(base)
             continue
         
-        # Aire de la premiere apparition de la bulle
-        firstArea = df[(df["frame0"]==frames0[0]) & (df["track_id"] == tid[frames0[0]])].iloc[0].at["area_px"]
-        firstX = df[(df["frame0"]==frames0[0]) & (df["track_id"] == tid[frames0[0]])].iloc[0].at["cx_px"]
-        
 
 
         # RECHERCHE DU DÉTACHEMENT POUR CETTE BULLE
         attach_start, attach_end_i, last_attached, detach_frame, fr_s = _find_departure(frames0, labels)
+
+        # Aire de la premiere apparition de la bulle
+        firstArea = df[(df["frame0"]==frames0[0]) & (df["track_id"] == tid[frames0[0]])].iloc[0].at["area_px"]
+        firstX = df[(df["frame0"]==frames0[0]) & (df["track_id"] == tid[frames0[0]])].iloc[0].at["cx_px"]
         
         # CAS 2: AUCUNE SÉQUENCE ATTACHÉE VALIDE TROUVÉE
         if attach_start is None:
@@ -467,6 +511,9 @@ def ComputeDepartureDiameter(savefolder, extension,
             # 2. DIAMÈTRE INTERPOLÉ: extrapolation au frame de détachement
             target_eval = detach_frame if detach_frame is not None else last_attached
             d_px_interp = _interp_at(d_series, target_eval, fit_deg)
+
+            # 3. Mean diameter on the detach bubble before a merge
+            d_px_mean = _mean_at(d_series, detach_frame, labels, mergeFrame)
             
             # Fallback: si interpolation échoue, utiliser la valeur discrète
             if not np.isfinite(d_px_interp): 
@@ -475,8 +522,10 @@ def ComputeDepartureDiameter(savefolder, extension,
             # STOCKAGE DES RÉSULTATS EN PIXELS ET MILLIMÈTRES
             base[f"D_{mname}_px_discr"] = d_px_discr
             base[f"D_{mname}_px_interp"] = d_px_interp
+            base[f"D_{mname}_px_mean"] = d_px_mean
             base[f"D_{mname}_mm_discr"] = d_px_discr * mm_per_px if np.isfinite(d_px_discr) else np.nan
             base[f"D_{mname}_mm_interp"] = d_px_interp * mm_per_px if np.isfinite(d_px_interp) else np.nan
+            base[f"D_{mname}_mm_mean"] = d_px_mean * mm_per_px if np.isfinite(d_px_mean) else np.nan
 
         rows_out.append(base)
 
@@ -497,8 +546,10 @@ def ComputeDepartureDiameter(savefolder, extension,
         mcols += [
             f"D_{m}_px_discr",    # Diamètre discret pixels
             f"D_{m}_px_interp",   # Diamètre interpolé pixels  
+            f"D_{m}_px_mean",
             f"D_{m}_mm_discr",    # Diamètre discret mm
-            f"D_{m}_mm_interp"    # Diamètre interpolé mm
+            f"D_{m}_mm_interp",    # Diamètre interpolé mm
+            f"D_{m}_mm_mean",
         ]
     cols = cols_head + mcols
 
@@ -516,4 +567,4 @@ def ComputeDepartureDiameter(savefolder, extension,
     print(f"[ComputeDepartureDiameter] salvato: {out_csv}")
     return rows_out
 
-ComputeDepartureDiameter(r"Results\T87\T87_out", "T87_50V1")
+# ComputeDepartureDiameter(r"Inputs\T87_out", "T87_60V1")

@@ -727,4 +727,4 @@ def findMerge(dataFolder, extension, score_thres=0.7, OVERLAP_THRESH=0.1,
 # extension="T113_2_60V_2" 
 # # dataFolder = "My_output/Test6/"
 # # extension = "Test6"
-findMerge("My_output/Test7", "LatMerge")
+# findMerge(r"Inputs\T87_out", "T87_60V1")

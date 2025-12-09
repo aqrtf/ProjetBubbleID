@@ -4,8 +4,8 @@ import numpy as np
 import pandas as pd
 import cv2, glob
 
-savefolder = r"C:\Users\afara\Documents\EPFL\cours\MA3\Projet\ProjetBubbleID\My_output\Test0"
-extension = "TestGUI"
+savefolder = r"C:\Users\faraboli\Desktop\BubbleID\BubbleIDGit\ProjetBubbleID\Inputs\T87_out"
+extension = "T87_75V1"
 
 # Chemins vers les fichiers
 rich_csv = os.path.join(savefolder, f"rich_{extension}.csv")

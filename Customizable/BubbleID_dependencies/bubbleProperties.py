@@ -5,11 +5,11 @@ from csteDef import *
  
 # Liste des méthodes valides pour le calcul du diamètre
 valid_methods = {"area", "feret_max", "feret_min", "ell_maj", "ell_min", "perim", "mix"}
-
+valid_suffix = {"interp", "discr", "mean"}
 
 def mainProperties(savefolder, extension,
                       diameterMethod=["mix"],
-                      interp=True,
+                      interp="mean",
                       chipName="T2", tension=50, 
                       fps=4000, min_attach_frame=4,
                       maxBirthSize = 3000,
@@ -29,9 +29,12 @@ def mainProperties(savefolder, extension,
         raise ValueError(f"Méthodes invalides: {invalid}. "
                          f"Les méthodes valides sont: {sorted(valid_methods)}")
 
-    # Construire les noms de colonnes dynamiquement
-    suffix = "interp" if interp else "discr"
-    colonnes = [f"D_{method}_mm_{suffix}" for method in diameterMethod]
+    # Vérifier que toutes les méthodes sont valides
+    invalid = [m for m in interp if m not in valid_suffix]
+    if interp not in valid_suffix:
+        raise ValueError(f"suffixe invalides: {invalid}. "
+                         f"Les méthodes valides sont: {sorted(valid_suffix)}")
+    colonnes = [f"D_{method}_mm_{interp}" for method in diameterMethod]
 
     # Chemins vers les fichiers
     departure_csv = os.path.join(savefolder, f"departure_{extension}.csv")
@@ -73,12 +76,20 @@ def mainProperties(savefolder, extension,
     # Conversion en arrays
     departDiameters = np.array(departDiameters)
     growingTimes = np.array(growingTimes)
+    frequencies = 1/growingTimes
+
+    # retrait des outliers
+    from fonctions import rmoutliers, rmmissing
+    departDiameters, _ = rmmissing(departDiameters)
+    frequencies, _ = rmmissing(frequencies)
+    departDiameters, _ = rmoutliers(departDiameters)
+    frequencies, _ = rmoutliers(frequencies)
 
     # Calcul des statistiques
-    departDiameterMean = np.nanmean(departDiameters) if departDiameters.size > 0 else np.nan
-    departDiameterStd = np.nanstd(departDiameters) if departDiameters.size > 0 else np.nan
-    growingTimeMean = np.nanmean(growingTimes) if growingTimes.size > 0 else np.nan
-    growingTimeStd = np.nanstd(growingTimes) if growingTimes.size > 0 else np.nan
+    departDiameterMean = np.mean(departDiameters) if departDiameters.size > 0 else np.nan
+    departDiameterStd = np.std(departDiameters) if departDiameters.size > 0 else np.nan
+    frequencyMean = np.mean(frequencies) if frequencies.size > 0 else np.nan
+    frequencyStd = np.std(frequencies) if frequencies.size > 0 else np.nan
 
     # Calcul des vitesses via la fonction bubble_velocities
     from BubbleID_dependencies.velocities import bubble_velocities
@@ -92,8 +103,8 @@ def mainProperties(savefolder, extension,
         "extension": extension,
         "departDiameter": departDiameterMean,
         "departDiameter_std": departDiameterStd,
-        "growingTime": growingTimeMean,
-        "growingTime_std": growingTimeStd,
+        "frequency": frequencyMean,
+        "frequency_std": frequencyStd,
         "elevationVelocity": detach_vel.vMean_mm,
         "elevationVelocity_std": detach_vel.vStd_mm,
         "growingVelocity": attach_vel.vMean_mm,
@@ -110,6 +121,7 @@ def mainProperties(savefolder, extension,
     with open(outJsonPath, "w", encoding="utf-8") as f:
         json.dump(dict_json, f, indent=4, ensure_ascii=False)
 
+    print(f"File salvato: {out_csv}")
     return results
 
-mainProperties(r"Results\T87\T87_out", "T87_50V1")
+# mainProperties(r"Inputs\T87_out", "T87_60V1")

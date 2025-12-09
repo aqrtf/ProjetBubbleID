@@ -2,8 +2,10 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import os
 path = r"C:\Users\faraboli\Desktop\BubbleID\BubbleIDGit\ProjetBubbleID\Inputs"
-chip = ["T87", "T88", "T89"]
-
+chip = ["T87",
+        "T88",
+        "T89"
+        ]
 
 def make_error_boxes(ax, xdata, ydata, xerror, yerror, facecolor='r',
                      edgecolor='none', alpha=0.5):
@@ -21,7 +23,7 @@ def make_error_boxes(ax, xdata, ydata, xerror, yerror, facecolor='r',
 
     # Plot errorbars
     artists = ax.errorbar(xdata, ydata, xerr=xerror, yerr=yerror,
-                          fmt='none', ecolor='k')
+                          fmt='none', ecolor=facecolor)
 
     return artists
 
@@ -30,7 +32,7 @@ def make_error_boxes(ax, xdata, ydata, xerror, yerror, facecolor='r',
 plt.figure()
 for c in chip:
     df = pd.read_csv(os.path.join(path, c+"_out\mainProperties.csv"))
-    plt.plot(df["departDiameter"], 1/df["growingTime"], ".", )
+    plt.plot(df["departDiameter"], df["frequency"], ".", )
 plt.legend(chip)
 plt.xlabel("Departure diameter [mm]")
 plt.ylabel("Frequency [Hz]")
@@ -53,15 +55,17 @@ for i, c in enumerate(chip):
 
     # Dummy data
     x = np.array(df["departDiameter"])
-    y = np.array(1/df["growingTime"])
+    y = np.array(df["frequency"])
 
     # Dummy errors (above and below)
     xerr = np.array(df["departDiameter_std"])
-    yerr = np.array(1/df["growingTime_std"])
+    yerr = np.array(df["frequency_std"])
     xerr = np.vstack([xerr, xerr])
     yerr = np.vstack([yerr, yerr])
 
     # Call function to create error boxes
     _ = make_error_boxes(ax, x, y, xerr, yerr, facecolor=color[i])
 plt.legend(chip)
+plt.xlabel("Departure diameter [mm]")
+plt.ylabel("Frequency [Hz]")
 plt.show()
