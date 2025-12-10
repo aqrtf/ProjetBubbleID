@@ -1,12 +1,15 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import os
+import numpy as np
+from scipy.stats import linregress
+
 path = r"C:\Users\faraboli\Desktop\BubbleID\BubbleIDGit\ProjetBubbleID\Inputs"
 chip = ["T87",
         "T88",
         "T89"
         ]
-
+saveFolder = "results"
 def make_error_boxes(ax, xdata, ydata, xerror, yerror, facecolor='r',
                      edgecolor='none', alpha=0.5):
 
@@ -32,10 +35,11 @@ def make_error_boxes(ax, xdata, ydata, xerror, yerror, facecolor='r',
 plt.figure()
 for c in chip:
     df = pd.read_csv(os.path.join(path, c+"_out\mainProperties.csv"))
-    plt.plot(df["departDiameter"], df["frequency"], ".", )
+    plt.plot(df["departDiameter"], df["frequency"], ".-", )
 plt.legend(chip)
 plt.xlabel("Departure diameter [mm]")
 plt.ylabel("Frequency [Hz]")
+plt.savefig(os.path.join(saveFolder,"diameterVSfrequeny.png"))
 plt.show()
 
 import matplotlib.pyplot as plt
@@ -68,4 +72,31 @@ for i, c in enumerate(chip):
 plt.legend(chip)
 plt.xlabel("Departure diameter [mm]")
 plt.ylabel("Frequency [Hz]")
+plt.savefig(os.path.join(saveFolder,"diameterVSfrequenyError.png"))
+plt.show()
+
+
+
+
+plt.figure()
+
+for c in chip:
+    # Lecture des données
+    df = pd.read_csv(os.path.join(path, c+"_out/mainProperties.csv"))
+    
+    # Scatter des points
+    plt.plot(df["departDiameter"], df["frequency"], ".", label=f"{c} data")
+    
+    # Fit linéaire
+    slope, intercept, r_value, p_value, std_err = linregress(df["departDiameter"], df["frequency"])
+    
+    # Droite ajustée
+    x_fit = np.linspace(df["departDiameter"].min(), df["departDiameter"].max(), 100)
+    y_fit = slope * x_fit + intercept
+    plt.plot(x_fit, y_fit, "-", label=f"{c} fit (R²={r_value**2:.2f})")
+
+plt.xlabel("Departure diameter [mm]")
+plt.ylabel("Frequency [Hz]")
+plt.legend()
+plt.savefig(os.path.join(saveFolder,"diameterVSfrequenyInterp.png"))
 plt.show()

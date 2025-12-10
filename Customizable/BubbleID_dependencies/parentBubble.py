@@ -5,6 +5,10 @@ import cv2
 from collections import defaultdict
 from dataclasses import dataclass
 
+from fonctionFile import readRichFile
+
+# TODO autoriser plus de 2 parents
+maxGrow = 50 # ratio between the grow and the median of grow to detect a grow that is due to a merge
 # ------------------------
 # UTILITAIRES
 # ------------------------
@@ -75,8 +79,9 @@ def build_masks_and_index(json_path, csv_path, image_shape, score_thres, dilate_
         dict: Structure nested {frame: {track_id: mask}} où chaque mask est un array numpy binaire
     """
     contours = load_json_contours(json_path)  # Charge tous les contours
-    df = pd.read_csv(csv_path)  # Charge le CSV de tracking
+    # df = pd.read_csv(csv_path)  # Charge le CSV de tracking
 
+    df = readRichFile(csv_path, score_thres)
     data_by_frame = defaultdict(dict)  # Structure: frame -> track_id -> mask
     
     for (frame, det_in_frame), contour in contours.items():
@@ -84,21 +89,16 @@ def build_masks_and_index(json_path, csv_path, image_shape, score_thres, dilate_
         row = df[(df['frame'] == frame) & (df['det_in_frame'] == det_in_frame)]
         if row.empty:  # Si pas de correspondance, on ignore
             continue
-        # On ne considere pas les prediction qui ont un score trop faible
-        for i in row["score"]:
-            if i < float(score_thres):  # <<<<<<<<<<<<<< filtro
-                continue
+        
+        # for i in row["score"]: # NOTE chgmt de la lecture du fichier rich, normalement plus besoin d'iterer ici, on a deja filtre les lignes
 
-            track_id = int(row.iloc[0]['track_id'])  # Récupère le track_id
-            mask = mask_from_contour(contour, image_shape, dilate_iters)  # Crée le masque
-            if np.sum(mask > 0) == 0:  # Vérifie que le masque n'est pas vide
-                continue
-            
-            # Stocke le masque dans la structure indexée
-            data_by_frame[frame][track_id] = mask 
-            # NOTE si les deux scores sont valables, on ecrase le premier, 
-            # ca ne devrait pas poser pb car si les deux ont le meme tid
-            # ils ont des mask similaire mais un etat different
+        track_id = int(row.iloc[0]['track_id'])  # Récupère le track_id
+        mask = mask_from_contour(contour, image_shape, dilate_iters)  # Crée le masque
+        if np.sum(mask > 0) == 0:  # Vérifie que le masque n'est pas vide
+            continue
+        
+        # Stocke le masque dans la structure indexée
+        data_by_frame[frame][track_id] = mask 
 
     return data_by_frame
 
@@ -131,7 +131,7 @@ def bulle_changement(data_by_frame):
     bulleDisparue = {}
     bulleApparue = {}
     for i, frame in enumerate(frames):
-        # WARNING si les frame ne sont pas successive il peux y avoir un probleme
+        # NOTE si les frame ne sont pas successive il peux y avoir un probleme
         if frame == 1: #La frame 1 ne nous interresse pas
             continue
         previous_frame = frame - 1
@@ -170,11 +170,11 @@ def bulle_croissance_rapide(data_by_frame):
         masksArea = np.array(masksArea)
         if masksArea.size>2:
             croissanceVelocity = np.diff(masksArea)/np.diff(frames)
-            # NOTE choisir un threshold justifie et visible
-            if croissanceVelocity.max() > 50 * np.median(croissanceVelocity[croissanceVelocity>0]): # TODO mettre le facteur en variable
+            if ((croissanceVelocity[croissanceVelocity>0].size > 0) and 
+                    (croissanceVelocity.max() > maxGrow * np.median(croissanceVelocity[croissanceVelocity>0]))): 
                 # il s'agit peut etre d'un merge non detecte car il n'y a pas de chgmt de tid
                 idx_max = croissanceVelocity.argmax() + 2 # le +2 vient car les frames commence a 1 et le diff
-                frameMerge = frames[idx_max]
+                frameMerge = frames[idx_max] # TODO IndexError: list index out of range pour T89_75V2, pas revu l'erreur
                 mask1 = data_by_frame[frameMerge][tid]
                 # NOTE pour l'instant on considere que le petit parent est tjrs visible sur la frame
                 for tid2, mask2 in data_by_frame[frameMerge].items():
@@ -723,8 +723,5 @@ def findMerge(dataFolder, extension, score_thres=0.7, OVERLAP_THRESH=0.1,
 
 ######################################################################################################
 
-# dataFolder=r"My_output\SaveData3"   # Define the folder you want the data to save in
-# extension="T113_2_60V_2" 
-# # dataFolder = "My_output/Test6/"
-# # extension = "Test6"
-# findMerge(r"Inputs\T87_out", "T87_60V1")
+# findMerge(r"Inputs\T89_out", "T89_75V2")
+# findMerge(r"My_output/Test6", "Test6")

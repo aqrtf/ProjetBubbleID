@@ -6,5 +6,21 @@
     "todo-tree.filtering.excludeGlobs": [
         "**/oldVersion/**"
     ],
-    "todo-tree.highlights.highlightDelay": 10000,
+    "todo-tree.highlights.highlightDelay": 1000,
+    "todo-tree.highlights.customHighlight": {
+        "TODO": {
+            "type": "none"
+        },
+        "NOTE": {
+            "type": "none"
+        }
+    },   
+    "todo-tree.general.tags": [
+        "BUG",
+        "HACK",
+        "FIXME",
+        "TODO",
+        "XXX",
+        "NOTE",
+    ]
 }
