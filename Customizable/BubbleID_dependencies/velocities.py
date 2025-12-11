@@ -75,26 +75,34 @@ def compute_speed_blocks(frames0, track_ids, labels, mergeFrames, contours, rich
 
         
     df = pd.DataFrame({
-        "frame": frames0,
+        "frame0": frames0,
         "track_id": track_ids,
         "label": labels
     })
     
     df["merge"]=0
     for i in mergeFrames: 
-        df["merge"] = df["merge"] + (df["frame"]>i).astype(int) # TODO verifier a partir de quelle frame prendre i, i-1, i-2 ???
+        df["merge"] = df["merge"] + (df["frame0"]>i-2).astype(int) # TODO verifier a partir de quelle frame prendre i, i-1, i-2 ???
     
     
-    df["time"] = df["frame"] / fps
+    df["time"] = df["frame0"] / fps
     df["block"] = (df["label"] != df["label"].shift()).cumsum() # block par label
     df["block"] = (df["block"]) + (df["merge"] != df["merge"].shift()).cumsum() # block par merge et par label
 
-    for i in mergeFrames: 
-        # NOTE on retire la frame ou a lieu le merge de l'analyse, est ce utile ??
-        # Supprimer toutes les lignes où col1 est dans la liste
-        # df = df[~df["col1"].isin(to_remove)]
-        df = df[df["frame"] != i] # TODO verifier a partir de quelle frame prendre i, i-1, i-2 ???
+    df["diameter"] = bubbleDiameter(df["frame0"], df["track_id"], rich_df)
 
+    botCoords = [extractPosition(fr, tid, contours, rich_df, "bottom")
+                  for fr, tid in zip(df["frame0"], df["track_id"])]
+    topCoords = [extractPosition(fr, tid, contours, rich_df, "top")
+                for fr, tid in zip(df["frame0"], df["track_id"])]
+    df["ybottom"] = [c[1] for c in botCoords]
+    df["ytop"] = [c[1] for c in topCoords]
+
+    # for i in mergeFrames: 
+        # NOTE on retire la frame ou a lieu le merge de l'analyse, est ce utile ??
+        ## Supprimer toutes les lignes où col1 est dans la liste
+        ## df = df[~df["col1"].isin(to_remove)]
+        # df = df[df["frame0"] != i] # verifier a partir de quelle frame prendre i, i-1, i-2 ???
 
 
     for _, group in df.groupby("block"):
@@ -107,12 +115,12 @@ def compute_speed_blocks(frames0, track_ids, labels, mergeFrames, contours, rich
             continue  # on ignore les UNKNOWN
 
         coords = [extractPosition(fr, tid, contours, rich_df, position)
-                  for fr, tid in zip(group["frame"], group["track_id"])]
+                  for fr, tid in zip(group["frame0"], group["track_id"])]
         if len(coords) < minPointForVelocity:
             continue
         
         diameters = np.array([bubbleDiameter(fr, tid, rich_df)
-                     for fr, tid in zip(group["frame"], group["track_id"])])
+                     for fr, tid in zip(group["frame0"], group["track_id"])])
 
         x = [c[0] for c in coords]
         y = [c[1] for c in coords]

@@ -92,7 +92,7 @@ def mainProperties(savefolder, extension,
     frequencyStd = np.std(frequencies) if frequencies.size > 0 else np.nan
 
     # Calcul des vitesses via la fonction bubble_velocities
-    from BubbleID_dependencies.velocities import bubble_velocities
+    from velocities import bubble_velocities
     attach_vel, detach_vel = bubble_velocities(savefolder, extension,
                                                minPointForVelocity=2, fps=fps)
     
@@ -124,4 +124,4 @@ def mainProperties(savefolder, extension,
     print(f"File salvato: {out_csv}")
     return results
 
-# mainProperties(r"Inputs\T87_out", "T87_60V1")
+mainProperties(r"Inputs\T87_out", "T87_60V1")

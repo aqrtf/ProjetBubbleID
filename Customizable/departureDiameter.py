@@ -2,7 +2,6 @@ from csteDef import *
 
 # TODO si on perd une bulle de vue trop longtemps, il faut repartir de zero pour son dwell time
 # TODO si on perd la bulle de vue que faire
-# TODO pour le diametre il faut prendre la moyennne sur les bulle une fois detache et avant merge
 
 def ComputeDepartureDiameter(savefolder, extension,
                                 *,

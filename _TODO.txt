@@ -11,3 +11,8 @@
 - PB pour les grandes bulles, celle ci s'etend au lieu de former une nouvelle bulle: MultiMerge ID30
 - PB Certaine bulles ont pour parents des bulles qui n'existe pas avant
 Pour les chgmt de frame ne se baser que sur les frame disparaissant avant
+
+
+TODO une condition possible est de regarder si la bulle a une taille qui diminue s'il y a eu un saut de detection, il faut surement dire que c'est une nouvelle bulle que si la bulle est suffisament petite
+
+on obtient alors de nouveau chemin pour les bulles et de nouvelle bulles

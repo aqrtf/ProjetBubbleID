@@ -174,7 +174,7 @@ def bulle_croissance_rapide(data_by_frame):
                     (croissanceVelocity.max() > maxGrow * np.median(croissanceVelocity[croissanceVelocity>0]))): 
                 # il s'agit peut etre d'un merge non detecte car il n'y a pas de chgmt de tid
                 idx_max = croissanceVelocity.argmax() + 2 # le +2 vient car les frames commence a 1 et le diff
-                frameMerge = frames[idx_max] # TODO IndexError: list index out of range pour T89_75V2, pas revu l'erreur
+                frameMerge = frames[idx_max] # NOTE IndexError: list index out of range pour T89_75V2, pas revu l'erreur
                 mask1 = data_by_frame[frameMerge][tid]
                 # NOTE pour l'instant on considere que le petit parent est tjrs visible sur la frame
                 for tid2, mask2 in data_by_frame[frameMerge].items():
@@ -182,8 +182,11 @@ def bulle_croissance_rapide(data_by_frame):
                     # TODO parfois il y a une oscillation du recouvrement
                     if tid != tid2:
                         if overlap_ratio(mask1, mask2, 'smallest') > 0.9:
+                            # TODO il faut verifier si la bulle disparait dans les frames suivante, mais regulierement elle reaparrait sur une autre bulle
+                            # TODO peut etre regarder si la taille diminue
                             print(frameMerge, tid, tid2)
                             result.append({"frame": frameMerge, "child": tid, "parent1": tid, "parent2": tid2})
+
     return result
 
 
