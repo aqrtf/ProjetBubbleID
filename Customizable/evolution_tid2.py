@@ -215,49 +215,38 @@ def evolution_tid(savefolder, extension, score_thres=0.7):
         "last_seen_frame": "Int16",
     })
 
-    # Remove duplicate evolution chains (where one chain is a subset of another)
-    def parse_tokens(series: pd.Series) -> pd.Series:
-        """Parse bubble_id strings into lists of integers using regex splitting."""
-        return series.astype(str).apply(lambda s: [int(tok) for tok in re.split(r'<->|=>', s)])
 
     def clean_bubble_ids(df: pd.DataFrame, group_col="last_seen_frame", id_col="bubble_id") -> pd.DataFrame:
         """
-        Remove evolution chains that are subsets of longer chains.
-        
-        For bubbles ending at the same frame, keep only the longest unique evolution chains
-        and remove chains that are suffixes of longer chains.
+        Remove rows where a bubble_id is a suffix of another bubble_id within the same group.
+
+        Args:
+            df (pd.DataFrame): Input DataFrame.
+            group_col (str): Column name for grouping (e.g., last_seen_frame).
+            id_col (str): Column name for the bubble ID.
+
+        Returns:
+            pd.DataFrame: Filtered DataFrame with redundant bubble_ids removed.
         """
-        df = df.copy()
-        df["_tokens"] = parse_tokens(df[id_col])
-        df["_len"] = df["_tokens"].apply(len)
 
+        reduced_df = df[[group_col, id_col]].copy()
+        reduced_df = reduced_df.drop_duplicates()
+        df = df.loc[reduced_df.index].copy()
         def filter_group(group: pd.DataFrame) -> pd.DataFrame:
-            """Filter within each group to keep only non-redundant evolution chains."""
-            # Sort by chain length (longest first)
-            group = group.sort_values("_len", ascending=False)
-            keep = []
-            mask = []
-            for tok in group["_tokens"]:
-                # Check if current token list is a suffix of any kept chain
-                if any(kt[-len(tok):] == tok for kt in keep):
-                    mask.append(False)
-                else:
-                    keep.append(tok)
-                    mask.append(True)
-            return group[mask]
+            """Filter rows within each group to remove redundant bubble_ids."""
+            group = group.copy()
+            group = group.sort_values(id_col, key=lambda col: col.str.len())  # Sort by length of bubble_id
+            to_keep = []
 
-        try:
-            result = df.groupby(group_col, dropna=False, group_keys=False).apply(filter_group)
-        except TypeError:
-            # Fallback for pandas versions that don't support dropna=False
-            sentinel = "__MISSING__"
-            df[group_col] = df[group_col].astype(object).where(df[group_col].notna(), sentinel)
-            result = df.groupby(group_col, group_keys=False).apply(filter_group)
-            result[group_col] = result[group_col].replace(sentinel, pd.NA)
+            for idx, row in group.iterrows():
+                bubble_id = row[id_col]
+                if not any(bubble_id.endswith(kept) for kept in to_keep):
+                    to_keep.append(bubble_id)
 
-        return result.drop(columns=["_tokens", "_len"])
+            return group[group[id_col].isin(to_keep)]
 
-    # Apply cleaning to remove redundant evolution chains
+        return df.groupby(group_col, group_keys=False).apply(filter_group)
+    
     results = clean_bubble_ids(results)
 
     # Extract the first track ID from each evolution chain
@@ -268,6 +257,8 @@ def evolution_tid(savefolder, extension, score_thres=0.7):
     results.to_csv(out_csv, index=False)
 
     print(f"Results saved to: {out_csv}")
+    
+
     
     
 evolution_tid(r"Inputs\T87_out", "T87_60V1")
