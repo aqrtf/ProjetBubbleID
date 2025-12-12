@@ -4,32 +4,14 @@ import pandas as pd
 from csteDef import *
 from functions.readRichFile import readRichFile
 from functions.rmmissing import rmmissing
-from functions.computeDiameter import bubbleArea, bubble_exists
+from functions.computeDiameter import bubbleArea
 # TODO separer les chemins si la bulle a une taille qui diminue apres un saut de tracking (valable pour les bulles attachees et/ou petites)
-maxJumpFrame = 2
-areaMax_px = 3000
+
 # savefolder=r"My_output\Test6"   # Define the folder you want the data to save in
 # extension="Test6" 
 # savefolder=r"My_output\SaveData3"   # Define the folder you want the data to save in
 # extension="T113_2_60V_2" 
 
-def flatten_tuple(node):
-    """
-    Aplatit la structure imbriquée de tuples en une liste de dictionnaires.
-    
-    Args:
-    - node: La structure imbriquée (tuple ou dict).
-    
-    Returns:
-    - list: Liste plate des dictionnaires.
-    """
-    if isinstance(node, tuple):
-        # Si c'est un tuple, prendre le premier élément (dict) et aplatir le reste
-        return [node[0]] + flatten_tuple(node[1])
-    else:
-        # Si c'est un dict (cas de base), retourner une liste avec ce dict
-        return [node] 
-    
 def separate_bubble_absorb(evolution_tid, rich_df, areaMax_px = 3000):
     """Quand de petites bulles sont absorbees dans une grosse, on ne detecte pas le merge.
     De plus, qq frame apres une nouvelle bulle apparait au meme endroit et on considere que c'est la meme.
@@ -52,108 +34,8 @@ def separate_bubble_absorb(evolution_tid, rich_df, areaMax_px = 3000):
     # il est peut etre plus simple de faire directement dans evolutiontid directement (pas besoin de separer)
     # dans ce cas il faut revenir sur la meme bulle a l'iteration suivante
     
-def analyzeTidEvolution(rich_df, df_score, df_fusion, changeID_df, nombre_frame, track_id, firstFrametoAnalyse=1):
-    separation = False
 
-    nameBubble = str(track_id)
-    last_seen_frame = None
-    
-    # Get all data for this track_id sorted by frame
-    track_data = df_score[df_score['track_id'] == track_id].sort_values('frame')
-    track_data = track_data[track_data['frame']>= firstFrametoAnalyse]
 
-    # Initialize evolution tracking array
-    evolution_tid = [None] * nombre_frame
-    mergeLocation = [] # frame start 1 here
-    first_seen_frame = track_data["frame"].min()
-    last_seen_frame = track_data["frame"].max()
-    evolution_tid[first_seen_frame-1] = track_id  # frame between 1 and nombre_frame
-    score = 0
-    missing_frame = 0
-    last_tid_seen = -1
-    last_frame_seen = -1
-    
-    # Track evolution through frames
-    for idx_frame in range(first_seen_frame, nombre_frame+1):
-
-        # Check if bubble merges with another at this frame
-        mask = (df_fusion["frame"] == idx_frame) & ((df_fusion["parent1"] == track_id) | (df_fusion["parent2"] == track_id))
-        if (mask).any():
-            # Bubble merges - update to child track_id
-            track_id = df_fusion.loc[mask, "child"].iat[0]
-            nameBubble += "=>" + str(track_id)
-            last_seen_frame = df_score.loc[df_score["track_id"] == track_id, "frame"].max()
-            mergeLocation.append(idx_frame)
-
-        # Check if bubble changes ID at this frame
-        mask = (changeID_df["frame"] == idx_frame) & ((changeID_df["old_id"] == track_id))
-        if (mask).any():
-            # Bubble changes ID - update to new track_id
-            track_id = changeID_df.loc[mask, "new_id"].iat[0]
-            nameBubble += "<->" + str(track_id)
-            last_seen_frame = df_score.loc[df_score["track_id"] == track_id, "frame"].max()
-
-        # Detection des cas d'absorption de petites bulles non detectees qui font conserver le meme tid pour la nouvelle bulle formee
-        if bubble_exists(idx_frame, track_id, rich_df):
-            if last_frame_seen != -1:
-                if idx_frame - last_frame_seen > maxJumpFrame:
-                    last_area = bubbleArea(last_frame_seen-1, last_tid_seen, rich_df)
-                    current_area = bubbleArea(idx_frame-1, track_id, rich_df)
-                    if current_area < areaMax_px and current_area < last_area: # TODO mettre une certaine tolerance a la decroissance
-                        # on ne suis plus la meme bulle, celle ci a ete absorbee sans qu'on ne puisse le detecter
-                        nameBubble += "=>0"
-                        # TODO il faut recommencer a analyser le meme tid mais a partir de cette frame (fonction recursive ???)
-                        separation = True
-                        break  # End current evolution chain here
-            last_tid_seen = track_id
-            last_frame_seen = idx_frame
-
-        # Get score for current frame and track_id
-        subset = df_score[(df_score["frame"] == idx_frame) & (df_score["track_id"] == track_id)]
-        
-        # Validate and process detection
-        if subset.empty:
-            missing_frame += 1  
-        elif len(subset) == 1:
-            score += subset["score"].iloc[0]
-            evolution_tid[idx_frame-1] = track_id
-        else:
-            raise ValueError("Multiple values found")
-        
-            
-        # end of the loop
-
-    # Calculate tracking statistics
-    not_none_idx = [i for i, x in enumerate(evolution_tid) if x is not None]
-    if not not_none_idx:
-        n_frames_tracked = missing_frame = -1  # no valid frames found
-    else:
-        start, end = not_none_idx[0], not_none_idx[-1]
-        sublist = evolution_tid[start:end+1]
-        # Count frames where bubble was detected
-        n_frames_tracked = sum(x is not None for x in sublist)
-        # Count frames where bubble was not detected (gaps in tracking)
-        missing_frame = sum(x is None for x in sublist)
-    
-    # Calculate mean score
-    mean_score = score/n_frames_tracked
-        
-    # Store results for this bubble evolution
-    results = ({
-        "bubble_id": nameBubble,
-        "first_seen_frame": first_seen_frame,
-        "last_seen_frame": last_seen_frame,
-        "n_frames_tracked": n_frames_tracked,
-        "missing_detection": missing_frame,
-        "mean_score_pct": mean_score,
-        "chemin": evolution_tid,
-        "mergeFrame": mergeLocation,
-    })
-
-    if separation:
-        return results, analyzeTidEvolution(rich_df, df_score, df_fusion, changeID_df, nombre_frame, track_id, idx_frame)
-    else:
-        return results
 
 def evolution_tid(savefolder, extension, score_thres=0.7):
     """
@@ -179,12 +61,12 @@ def evolution_tid(savefolder, extension, score_thres=0.7):
     rich_df = readRichFile(rich_path, score_thres)
 
     path = os.path.join(savefolder, f"fusionResult_{extension}.csv")
-    if not os.path.isfile(path):
+    if not os.path.isfile(rich_path):  # Note: This should probably check path instead of rich_path
         raise FileNotFoundError(f"{path} not found")
     df_fusion = pd.read_csv(path)
 
     path = os.path.join(savefolder, f"changeIDResultAll_{extension}.csv")
-    if not os.path.isfile(path): 
+    if not os.path.isfile(rich_path):  # Note: This should probably check path instead of rich_path
         raise FileNotFoundError("rich_ file not found")
     changeID_df = pd.read_csv(path)
 
@@ -193,16 +75,84 @@ def evolution_tid(savefolder, extension, score_thres=0.7):
     df_score = rich_df[["track_id", "frame", "score", "class_id"]].copy()
 
     # Parameters
-    nombre_frame = df_score['frame'].max()
+    last_frame = df_score['frame'].max()
     results = []
 
     # Process each unique track_id
-    for track_id in sorted(df_score['track_id'].unique()): 
+    for track_id in sorted(df_score['track_id'].unique()): # TODO changer l'iteration ???
 
-        res = analyzeTidEvolution(rich_df, df_score, df_fusion, changeID_df, nombre_frame, track_id)
-        res = flatten_tuple(res)    
+        nameBubble = str(track_id)
+        last_seen_frame = None
+        
+        # Get all data for this track_id sorted by frame
+        track_data = df_score[df_score['track_id'] == track_id].sort_values('frame')
+        
+        # Initialize evolution tracking array
+        evolution_tid = [None] * last_frame
+        mergeLocation = []
+        first_seen_frame = track_data["frame"].min()
+        last_seen_frame = track_data["frame"].max()
+        evolution_tid[first_seen_frame-1] = track_id  # frame between 1 and last_frame
+        score = 0
+        missing_frame = 0
+        
+        # Track evolution through frames
+        for idx_frame in range(first_seen_frame, last_frame+1):
+            # Check if bubble merges with another at this frame
+            mask = (df_fusion["frame"] == idx_frame) & ((df_fusion["parent1"] == track_id) | (df_fusion["parent2"] == track_id))
+            if (mask).any():
+                # Bubble merges - update to child track_id
+                track_id = df_fusion.loc[mask, "child"].iat[0]
+                nameBubble += "=>" + str(track_id)
+                last_seen_frame = df_score.loc[df_score["track_id"] == track_id, "frame"].max()
+                mergeLocation.append(idx_frame)
+
+            # Check if bubble changes ID at this frame
+            mask = (changeID_df["frame"] == idx_frame) & ((changeID_df["old_id"] == track_id))
+            if (mask).any():
+                # Bubble changes ID - update to new track_id
+                track_id = changeID_df.loc[mask, "new_id"].iat[0]
+                nameBubble += "<->" + str(track_id)
+                last_seen_frame = df_score.loc[df_score["track_id"] == track_id, "frame"].max()
+
+            # Get score for current frame and track_id
+            subset = df_score[(df_score["frame"] == idx_frame) & (df_score["track_id"] == track_id)]
+            
+            # Validate and process detection
+            if subset.empty:
+                missing_frame += 1  
+            elif len(subset) == 1:
+                score += subset["score"].iloc[0]
+                evolution_tid[idx_frame-1] = track_id
+            else:
+                raise ValueError("Multiple values found")
+    
+        # Calculate tracking statistics
+        not_none_idx = [i for i, x in enumerate(evolution_tid) if x is not None]
+        if not not_none_idx:
+            n_frames_tracked = missing_frame = -1  # no valid frames found
+        else:
+            start, end = not_none_idx[0], not_none_idx[-1]
+            sublist = evolution_tid[start:end+1]
+            # Count frames where bubble was detected
+            n_frames_tracked = sum(x is not None for x in sublist)
+            # Count frames where bubble was not detected (gaps in tracking)
+            missing_frame = sum(x is None for x in sublist)
+        
+        # Calculate mean score
+        mean_score = score/n_frames_tracked
+            
         # Store results for this bubble evolution
-        results.extend(res)
+        results.append({
+            "bubble_id": nameBubble,
+            "first_seen_frame": first_seen_frame,
+            "last_seen_frame": last_seen_frame,
+            "n_frames_tracked": n_frames_tracked,
+            "missing_detection": missing_frame,
+            "mean_score_pct": mean_score,
+            "chemin": evolution_tid,
+            "mergeFrame": mergeLocation,
+        })
             
     # Convert results to DataFrame with proper data types
     results = pd.DataFrame(results).astype({
@@ -265,4 +215,4 @@ def evolution_tid(savefolder, extension, score_thres=0.7):
     print(f"Results saved to: {out_csv}")
     
     
-evolution_tid(r"Inputs\T87_out", "T87_60V1")
+# evolution_tid(r"Inputs\T87_out", "T87_60V1")

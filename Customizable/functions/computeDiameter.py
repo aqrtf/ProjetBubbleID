@@ -50,3 +50,19 @@ def bubbleArea(frame0, tid, rich_df):
             bubble_data = rich_df.loc[(rich_df["frame0"] == fr) & (rich_df["track_id"] == t)]
             area_px.append(bubble_data["area_px"].values[0])
         return area_px
+    
+def bubble_exists(frame, tid, rich_df):
+    """
+    Vérifie si une bulle avec le track_id (tid) existe dans la frame donnée.
+    
+    Args:
+    - df (pd.DataFrame): Le dataframe rich filtré.
+    - frame (int): Le numéro de la frame commencant a 1.
+    - tid (int): Le track_id de la bulle.
+    
+    Returns:
+    - bool: True si la bulle existe, False sinon.
+    """
+    # Filtrer les lignes où frame et track_id correspondent
+    filtered = rich_df[(rich_df['frame'] == frame) & (rich_df['track_id'] == tid)]
+    return not filtered.empty

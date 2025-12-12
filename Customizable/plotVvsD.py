@@ -38,7 +38,7 @@ def func(x, a):
     return np.sqrt( (4/3) * (rho_w - rho_air) * g * x / (a * rho_w) )
 
 popt, pcov = curve_fit(func, np.array(d_all)*1e-3, np.array(v_all)*1e-3)
-cd_fit = popt[0] # on passe de mm a m
+cd_fit = popt[0]
 print(f"cd_fit : {cd_fit}")
 v_fit = func(dd, cd_fit)
 plt.plot(dd*1e3, v_fit*1e3, color="orange", label="Fitted Curve")

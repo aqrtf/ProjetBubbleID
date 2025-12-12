@@ -53,7 +53,6 @@ def separate_bubble_absorb(evolution_tid, rich_df, areaMax_px = 3000):
     # dans ce cas il faut revenir sur la meme bulle a l'iteration suivante
     
 def analyzeTidEvolution(rich_df, df_score, df_fusion, changeID_df, nombre_frame, track_id, firstFrametoAnalyse=1):
-    separation = False
 
     nameBubble = str(track_id)
     last_seen_frame = None
@@ -70,7 +69,6 @@ def analyzeTidEvolution(rich_df, df_score, df_fusion, changeID_df, nombre_frame,
     evolution_tid[first_seen_frame-1] = track_id  # frame between 1 and nombre_frame
     score = 0
     missing_frame = 0
-    last_tid_seen = -1
     last_frame_seen = -1
     
     # Track evolution through frames
@@ -96,16 +94,27 @@ def analyzeTidEvolution(rich_df, df_score, df_fusion, changeID_df, nombre_frame,
         # Detection des cas d'absorption de petites bulles non detectees qui font conserver le meme tid pour la nouvelle bulle formee
         if bubble_exists(idx_frame, track_id, rich_df):
             if last_frame_seen != -1:
-                if idx_frame - last_frame_seen > maxJumpFrame:
-                    last_area = bubbleArea(last_frame_seen-1, last_tid_seen, rich_df)
-                    current_area = bubbleArea(idx_frame-1, track_id, rich_df)
-                    if current_area < areaMax_px and current_area < last_area: # TODO mettre une certaine tolerance a la decroissance
-                        # on ne suis plus la meme bulle, celle ci a ete absorbee sans qu'on ne puisse le detecter
-                        nameBubble += "=>0"
-                        # TODO il faut recommencer a analyser le meme tid mais a partir de cette frame (fonction recursive ???)
-                        separation = True
-                        break  # End current evolution chain here
-            last_tid_seen = track_id
+                if idx_frame - last_frame_seen >= maxJumpFrame:
+                    area = bubbleArea(idx_frame-1, track_id, rich_df)
+                    if area < areaMax_px: 
+                        # on veut un max_age plus court pour les petites bulles => on reset
+                        # TODO on perd les premieres frames de la bulle qui va etre absorbee
+                        nameBubble = str(track_id)
+                        last_seen_frame = None
+                        
+                        # Get all data for this track_id sorted by frame
+                        track_data = df_score[df_score['track_id'] == track_id].sort_values('frame')
+                        track_data = track_data[track_data['frame']>= firstFrametoAnalyse]
+
+                        # Initialize evolution tracking array
+                        evolution_tid = [None] * nombre_frame
+                        mergeLocation = [] # frame start 1 here
+                        first_seen_frame = idx_frame
+                        last_seen_frame = track_data["frame"].max()
+                        evolution_tid[first_seen_frame-1] = track_id  # frame between 1 and nombre_frame
+                        score = 0
+                        missing_frame = 0
+                        last_frame_seen = -1
             last_frame_seen = idx_frame
 
         # Get score for current frame and track_id
@@ -150,10 +159,7 @@ def analyzeTidEvolution(rich_df, df_score, df_fusion, changeID_df, nombre_frame,
         "mergeFrame": mergeLocation,
     })
 
-    if separation:
-        return results, analyzeTidEvolution(rich_df, df_score, df_fusion, changeID_df, nombre_frame, track_id, idx_frame)
-    else:
-        return results
+    return results
 
 def evolution_tid(savefolder, extension, score_thres=0.7):
     """
@@ -199,10 +205,9 @@ def evolution_tid(savefolder, extension, score_thres=0.7):
     # Process each unique track_id
     for track_id in sorted(df_score['track_id'].unique()): 
 
-        res = analyzeTidEvolution(rich_df, df_score, df_fusion, changeID_df, nombre_frame, track_id)
-        res = flatten_tuple(res)    
+        res = analyzeTidEvolution(rich_df, df_score, df_fusion, changeID_df, nombre_frame, track_id)  
         # Store results for this bubble evolution
-        results.extend(res)
+        results.append(res)
             
     # Convert results to DataFrame with proper data types
     results = pd.DataFrame(results).astype({
