@@ -8,7 +8,7 @@ def replaceChangedID(rich_df, changeIDList):
     # df.loc[...] sélectionne les lignes selon une condition.
     # (df['frame'] > x) & (df['tid'] == y) est la condition combinée.
     # 'status' est la colonne que tu modifies (remplace par celle que tu veux).
-import Customizable.BubbleID_dependencies.parentBubble as parentBubble  
+import parentBubble as parentBubble  
 dataFolder = "My_output/Test6"
 extension = "Test6"
 

@@ -74,16 +74,16 @@ for idx_chip, chip in enumerate(chipName):
                 test120.make_tracked_video(n_frames=nFrameExtract, fps=5, score_thres = score_thres)
 
             if findMerge:
-                import BubbleID_dependencies.parentBubble as parentBubble
+                import parentBubble as parentBubble
                 parentBubble.findMerge(savefolder, extension)
 
-                import BubbleID_dependencies.evolution_tid as evolution_tid
+                import evolution_tid as evolution_tid
                 evolution_tid.evolution_tid(savefolder, extension, score_thres)
 
             import departureDiameter 
             departureDiameter.ComputeDepartureDiameter(savefolder, extension)
 
-            from BubbleID_dependencies.bubbleProperties import mainProperties
+            from Customizable.bubbleProperties import mainProperties
             mainProperties(savefolder, extension, chipName=chip, tension=t)
                 
                 

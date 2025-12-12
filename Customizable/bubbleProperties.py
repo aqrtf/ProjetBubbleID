@@ -1,6 +1,9 @@
 import os, csv, ast, json
 import numpy as np, pandas as pd
+
 from csteDef import *
+from functions.rmmissing import rmmissing
+from functions.rmoutliers import rmoutliers
 
  
 # Liste des méthodes valides pour le calcul du diamètre
@@ -79,7 +82,6 @@ def mainProperties(savefolder, extension,
     frequencies = 1/growingTimes
 
     # retrait des outliers
-    from fonctions import rmoutliers, rmmissing
     departDiameters, _ = rmmissing(departDiameters)
     frequencies, _ = rmmissing(frequencies)
     departDiameters, _ = rmoutliers(departDiameters)

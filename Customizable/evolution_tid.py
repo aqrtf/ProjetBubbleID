@@ -2,6 +2,9 @@ import os, csv, cv2, re,  numpy as np
 import pandas as pd
 from csteDef import *
 
+
+# TODO separer les chemins si la bulle a une taille qui diminue apres un saut de tracking (valable pour les bulles attachees et/ou petites)
+
 # savefolder=r"My_output\Test6"   # Define the folder you want the data to save in
 # extension="Test6" 
 # savefolder=r"My_output\SaveData3"   # Define the folder you want the data to save in

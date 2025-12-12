@@ -426,7 +426,7 @@ class BubbleIDGUI:
             return   
         self.update_status("Finding merges...")
         try:
-            import BubbleID_dependencies.parentBubble as parentBubble
+            import parentBubble as parentBubble
             # parentBubble = importlib.reload(parentBubble)
             parentBubble.findMerge(self.save_folder_var.get(), self.extension_var.get(),
                                    score_thres=self.scoreThres_var.get(),
@@ -443,7 +443,7 @@ class BubbleIDGUI:
             self.update_status("Error")
         self.update_status("Finding evolution of track ID...")
         try:
-            import BubbleID_dependencies.evolution_tid as evolution_tid
+            import evolution_tid as evolution_tid
             # evolution_tid = importlib.reload(evolution_tid)
             evolution_tid.evolution_tid(self.save_folder_var.get(), self.extension_var.get(), score_thres=self.scoreThres_var.get())
             self.log_message("Evolution completed")
@@ -458,7 +458,7 @@ class BubbleIDGUI:
             return     
         self.update_status("Computing dwell time...")
         try:
-            import BubbleID_dependencies.computedwell as computedwell
+            import computedwell as computedwell
             # computedwell = importlib.reload(computedwell)
             computedwell.analyze_dwell_time(self.save_folder_var.get(), self.extension_var.get(),
                                             score_thres=self.scoreThres_var.get(),
@@ -491,7 +491,7 @@ class BubbleIDGUI:
             return
         self.update_status("Calculating bubble properties...")
         try:
-            from BubbleID_dependencies.bubbleProperties import mainProperties
+            from Customizable.bubbleProperties import mainProperties
             mainProperties(self.save_folder_var.get(), self.extension_var.get())
             self.log_message("Bubble properties calculation completed")
             self.update_status("Ready")
