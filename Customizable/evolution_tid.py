@@ -1,14 +1,41 @@
 import os, csv, cv2, re,  numpy as np
 import pandas as pd
+
 from csteDef import *
-
-
+from functions.readRichFile import readRichFile
+from functions.rmmissing import rmmissing
+from functions.computeDiameter import bubbleArea
 # TODO separer les chemins si la bulle a une taille qui diminue apres un saut de tracking (valable pour les bulles attachees et/ou petites)
 
 # savefolder=r"My_output\Test6"   # Define the folder you want the data to save in
 # extension="Test6" 
 # savefolder=r"My_output\SaveData3"   # Define the folder you want the data to save in
 # extension="T113_2_60V_2" 
+
+def separate_bubble_absorb(evolution_tid, rich_df, areaMax_px = 3000):
+    """Quand de petites bulles sont absorbees dans une grosse, on ne detecte pas le merge.
+    De plus, qq frame apres une nouvelle bulle apparait au meme endroit et on considere que c'est la meme.
+    
+    Cette fonction essaie de detecter ces cas et de separer ce track en deux distincts.
+    Pour ce faire on regarde si l'aire de la bulle a diminuer apres un saut de detection,
+    cela n'est valable que pour les petites bulles. La definition de petites bulles est arbitraire."""
+    tids, mask = rmmissing(evolution_tid)
+    frames0 = np.where(mask)[0]
+    areas = bubbleArea(frames0, tids, rich_df)
+    jump_indices = np.where(np.diff(frames0, prepend=frames0[0]) > 1)[0] # on rajoute un element au debut pour garder la meme taille
+    diameterDecrease_indices = np.where(np.diff(areas, prepend=areas[0]) < 0)[0]
+    possible_separations_idx = np.intersect1d(jump_indices, diameterDecrease_indices)
+    separations_idx = []
+    for idx in possible_separations_idx:
+        if areas[idx]< areaMax_px:
+            separations_idx.append(idx)
+
+    # TODO il faut reussir a venir modifier le evolution_tid en plusieurs parties a chaque fois 
+    # il est peut etre plus simple de faire directement dans evolutiontid directement (pas besoin de separer)
+    # dans ce cas il faut revenir sur la meme bulle a l'iteration suivante
+    
+
+
 
 def evolution_tid(savefolder, extension, score_thres=0.7):
     """
@@ -31,9 +58,7 @@ def evolution_tid(savefolder, extension, score_thres=0.7):
     
     # Load input data files
     rich_path = os.path.join(savefolder, f"rich_{extension}.csv")
-    if not os.path.isfile(rich_path):
-        raise FileNotFoundError("rich_ file not found")
-    rich_df = pd.read_csv(rich_path)
+    rich_df = readRichFile(rich_path, score_thres)
 
     path = os.path.join(savefolder, f"fusionResult_{extension}.csv")
     if not os.path.isfile(rich_path):  # Note: This should probably check path instead of rich_path
@@ -45,17 +70,9 @@ def evolution_tid(savefolder, extension, score_thres=0.7):
         raise FileNotFoundError("rich_ file not found")
     changeID_df = pd.read_csv(path)
 
-    # Filter rows with score above threshold and valid track_id
-    df_filter = rich_df[rich_df['score'] >= score_thres]
-    # Remove rows with tracking problems (negative or NaN track_id)
-    df_filter = df_filter[df_filter["track_id"].fillna(-1).astype(int) >= 0]
-
-    # Remove duplicates: for each (track_id, frame), keep the detection with highest score
-    df_filter = (df_filter.sort_values(["track_id", "frame", "score"], ascending=[True, True, False])
-            .drop_duplicates(["track_id", "frame"], keep="first"))
 
     # Extract relevant columns for scoring
-    df_score = df_filter[["track_id", "frame", "score", "class_id"]].copy()
+    df_score = rich_df[["track_id", "frame", "score", "class_id"]].copy()
 
     # Parameters
     last_frame = df_score['frame'].max()
