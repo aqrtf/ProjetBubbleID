@@ -53,7 +53,7 @@ def separate_bubble_absorb(evolution_tid, rich_df, areaMax_px = 3000):
     # dans ce cas il faut revenir sur la meme bulle a l'iteration suivante
     
 def analyzeTidEvolution(rich_df, df_score, df_fusion, changeID_df, nombre_frame, track_id, firstFrametoAnalyse=1):
-
+    results = []
     nameBubble = str(track_id)
     last_seen_frame = None
     
@@ -69,7 +69,7 @@ def analyzeTidEvolution(rich_df, df_score, df_fusion, changeID_df, nombre_frame,
     evolution_tid[first_seen_frame-1] = track_id  # frame between 1 and nombre_frame
     score = 0
     missing_frame = 0
-    last_frame_seen = -1
+    last_frame_valid = -1
     
     # Track evolution through frames
     for idx_frame in range(first_seen_frame, nombre_frame+1):
@@ -93,12 +93,36 @@ def analyzeTidEvolution(rich_df, df_score, df_fusion, changeID_df, nombre_frame,
 
         # Detection des cas d'absorption de petites bulles non detectees qui font conserver le meme tid pour la nouvelle bulle formee
         if bubble_exists(idx_frame, track_id, rich_df):
-            if last_frame_seen != -1:
-                if idx_frame - last_frame_seen >= maxJumpFrame:
+            if last_frame_valid != -1:
+                if idx_frame - last_frame_valid >= maxJumpFrame:
                     area = bubbleArea(idx_frame-1, track_id, rich_df)
                     if area < areaMax_px: 
                         # on veut un max_age plus court pour les petites bulles => on reset
                         # TODO on perd les premieres frames de la bulle qui va etre absorbee
+                            # Calculate tracking statistics
+                        not_none_idx = [i for i, x in enumerate(evolution_tid) if x is not None]
+                        if not not_none_idx:
+                            n_frames_tracked = missing_frame = -1  # no valid frames found
+                        else:
+                            start, end = not_none_idx[0], not_none_idx[-1]
+                            sublist = evolution_tid[start:end+1]
+                            # Count frames where bubble was detected
+                            n_frames_tracked = sum(x is not None for x in sublist)
+                            # Count frames where bubble was not detected (gaps in tracking)
+                            missing_frame = sum(x is None for x in sublist)
+                        
+                        # Calculate mean score
+                        mean_score = score/n_frames_tracked
+                        results.append({
+                            "bubble_id": nameBubble,
+                            "first_seen_frame": first_seen_frame,
+                            "last_seen_frame": last_frame_valid, 
+                            "n_frames_tracked": n_frames_tracked,
+                            "missing_detection": missing_frame,
+                            "mean_score_pct": mean_score,
+                            "chemin": evolution_tid,
+                            "mergeFrame": mergeLocation,
+                        })
                         nameBubble = str(track_id)
                         last_seen_frame = None
                         
@@ -114,8 +138,8 @@ def analyzeTidEvolution(rich_df, df_score, df_fusion, changeID_df, nombre_frame,
                         evolution_tid[first_seen_frame-1] = track_id  # frame between 1 and nombre_frame
                         score = 0
                         missing_frame = 0
-                        last_frame_seen = -1
-            last_frame_seen = idx_frame
+                        last_frame_valid = -1
+            last_frame_valid = idx_frame
 
         # Get score for current frame and track_id
         subset = df_score[(df_score["frame"] == idx_frame) & (df_score["track_id"] == track_id)]
@@ -148,7 +172,7 @@ def analyzeTidEvolution(rich_df, df_score, df_fusion, changeID_df, nombre_frame,
     mean_score = score/n_frames_tracked
         
     # Store results for this bubble evolution
-    results = ({
+    results.append({
         "bubble_id": nameBubble,
         "first_seen_frame": first_seen_frame,
         "last_seen_frame": last_seen_frame,
@@ -207,7 +231,7 @@ def evolution_tid(savefolder, extension, score_thres=0.7):
 
         res = analyzeTidEvolution(rich_df, df_score, df_fusion, changeID_df, nombre_frame, track_id)  
         # Store results for this bubble evolution
-        results.append(res)
+        results.extend(res)
             
     # Convert results to DataFrame with proper data types
     results = pd.DataFrame(results).astype({
