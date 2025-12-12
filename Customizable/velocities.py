@@ -1,7 +1,10 @@
 import os, math, csv, ast, json
 import numpy as np, pandas as pd
+
 from csteDef import *
-from computeDiameter import bubbleDiameter
+from functions.computeDiameter import bubbleDiameter
+from functions.readRichFile import readRichFile
+from functions.rmoutliers import rmoutliers
 
 # TODO pour la velocity il faut prendre en compte que entre les merges
 # TODO il serait bien de comparer la vitesse avec le diameter
@@ -17,7 +20,10 @@ class velocities:
         self.vMeanPerBlock = None
         self.vStd = -1
         self.vStdPerBlock = None
-        
+
+    def removeOutliers(self):
+        self.vy = [rmoutliers(arr)[0] for arr in self.vy]
+
     def computeMean(self):
         """Calcule la vitesse moyenne globale et par bulle."""
         self.vMeanPerBlock = [arr.mean() for arr in self.vy]
@@ -32,11 +38,11 @@ class velocities:
         self.vy_mm = [x * mm_per_px for x in self.vy]
         self.dx_mm = [x * mm_per_px for x in self.dx]
         self.vMean_mm = self.vMean * mm_per_px
-        self.vMeanPerBubble_mm = np.array(self.vMeanPerBlock) * mm_per_px
+        self.vMeanPerBlock_mm = np.array(self.vMeanPerBlock) * mm_per_px
         self.vStd_mm = self.vStd * mm_per_px
-        self.vStdPerBubble_mm = np.array(self.vStdPerBlock) * mm_per_px
+        self.vStdPerBlock_mm = np.array(self.vStdPerBlock) * mm_per_px
         self.diameter_mm = [x * mm_per_px for x in self.diameter]
-
+        self.diameterMeanPerBlock_mm = np.array(self.diameterMeanPerBlock) * mm_per_px
 
 def extractPosition(frame0, tid, contours, rich_df, position):
     """
@@ -82,8 +88,7 @@ def compute_speed_blocks(frames0, track_ids, labels, mergeFrames, contours, rich
     
     df["merge"]=0
     for i in mergeFrames: 
-        df["merge"] = df["merge"] + (df["frame0"]>i-2).astype(int) # TODO verifier a partir de quelle frame prendre i, i-1, i-2 ???
-    
+        df["merge"] = df["merge"] + (df["frame0"]>i-2).astype(int) 
     
     df["time"] = df["frame0"] / fps
     df["block"] = (df["label"] != df["label"].shift()).cumsum() # block par label
@@ -102,7 +107,7 @@ def compute_speed_blocks(frames0, track_ids, labels, mergeFrames, contours, rich
         # NOTE on retire la frame ou a lieu le merge de l'analyse, est ce utile ??
         ## Supprimer toutes les lignes où col1 est dans la liste
         ## df = df[~df["col1"].isin(to_remove)]
-        # df = df[df["frame0"] != i] # verifier a partir de quelle frame prendre i, i-1, i-2 ???
+        # df = df[df["frame0"] != i-2] 
 
 
     for _, group in df.groupby("block"):
@@ -124,12 +129,12 @@ def compute_speed_blocks(frames0, track_ids, labels, mergeFrames, contours, rich
 
         x = [c[0] for c in coords]
         y = [c[1] for c in coords]
-        t = group["time"].to_numpy()
+        t = group["time"].to_numpy() # s
 
-        dx = np.diff(x)
-        dy = np.diff(y)
-        dt = np.diff(t)
-        vy = - dy / dt  # origine en haut à gauche
+        dx = np.diff(x) # px
+        dy = np.diff(y) # px
+        dt = np.diff(t) # s
+        vy = - dy / dt  # origine en haut à gauche (px/s)
         
         # NOTE normalement on ne devrait plus avoir de vitesse negative puisqu'on ne prend plus ce qui se passe au merge
 
@@ -188,11 +193,7 @@ def bubble_velocities(savefolder, extension, minPointForVelocity=2, fps=4000):
         contours = json.load(f)
 
     # Chargement du DataFrame principal
-    rich_df = pd.read_csv(rich_csv)
-    rich_df.columns = [c.strip().lower() for c in rich_df.columns]
-    rich_df = rich_df.loc[:, ~pd.Index(rich_df.columns).duplicated(keep='first')]
-    rich_df["frame0"] = rich_df["frame"].astype(int) - 1
-    rich_df = rich_df[rich_df["track_id"].fillna(-1).astype(int) >= 0]
+    rich_df = readRichFile(rich_csv)
 
     # Evolution des tracks
     df_evol = pd.read_csv(evolution_csv)
@@ -226,6 +227,7 @@ def bubble_velocities(savefolder, extension, minPointForVelocity=2, fps=4000):
     # TODO ajouter une condition si dx trop grand
 
     # Calcul des statistiques globales
+    detach_vel.removeOutliers()
     detach_vel.computeMean()
     attach_vel.computeMean()
 

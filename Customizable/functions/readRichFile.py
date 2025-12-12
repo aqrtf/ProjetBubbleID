@@ -1,10 +1,11 @@
 import os
 import pandas as pd
-def readRichFile(path, scoreThresh):
+def readRichFile(path, scoreThresh=0):
     # le fichiers existe-il?
     if not os.path.isfile(path):
         raise FileNotFoundError(f"{path} non trovato.")
     df = pd.read_csv(path)
+    df.columns = [c.strip().lower() for c in df.columns] # on retire les espaces
     # Filter rows with score above threshold and valid track_id
     df_filter = df[df['score'] >= scoreThresh]
     df_filter = df_filter[df_filter["track_id"].fillna(-1).astype(int) >= 0]
