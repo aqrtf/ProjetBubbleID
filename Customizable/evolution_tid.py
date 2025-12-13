@@ -227,5 +227,5 @@ def evolution_tid(savefolder, extension, score_thres=0.7):
     
 
     
-    
-evolution_tid(r"Inputs\T87_out", "T87_60V1")
+if __name__ == "__main__": 
+    evolution_tid(r"Inputs\T87_out", "T87_60V1")

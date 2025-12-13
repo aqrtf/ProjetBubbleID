@@ -723,6 +723,8 @@ def findMerge(dataFolder, extension, score_thres=0.7, OVERLAP_THRESH=0.1,
     return fusionDict, changeIDList_clean
 
 ######################################################################################################
-
-# findMerge(r"Inputs\T89_out", "T89_75V2")
-# findMerge(r"My_output/Test6", "Test6")
+if __name__ == "__main__":
+    # Example usage for testing purposes
+    savefolder = r"Inputs\T87_out"
+    extension = "T87_60V1"
+    findMerge(savefolder, extension)

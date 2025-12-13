@@ -126,4 +126,10 @@ def mainProperties(savefolder, extension,
     print(f"File salvato: {out_csv}")
     return results
 
-mainProperties(r"Inputs\T87_out", "T87_60V1")
+if __name__ == "__main__":
+    # Example usage for testing purposes
+    savefolder = r"Inputs\T87_out"
+    extension = "T87_60V1"
+
+    # Test mainProperties
+    mainProperties(savefolder, extension)

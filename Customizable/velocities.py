@@ -232,3 +232,13 @@ def bubble_velocities(savefolder, extension, minPointForVelocity=2, fps=4000):
     
     return attach_vel, detach_vel
 
+if __name__ == "__main__":
+    # Example usage for testing purposes
+    savefolder = r"Inputs\T87_out"
+    extension = "T87_60V1"
+
+    # Test bubble_velocities
+    attach_vel, detach_vel = bubble_velocities(savefolder, extension)
+    print(attach_vel)
+    print(detach_vel)
+

@@ -222,10 +222,10 @@ def analyze_dwell_time(savefolder, extension, score_thres = 0.7, n_frames_post_d
 
     print(f"Results saved to: {out_csv}")
 
-# #########################################################
-# savefolder=r"My_output\Test6"   # Define the folder you want the data to save in
-# extension="Test6" 
-savefolder=r"Inputs\T87_out"   # Define the folder you want the data to save in
-extension="T87_50V1" 
+if __name__ == "__main__":
+    # Example usage for testing purposes
+    savefolder = r"Inputs\T87_out"
+    extension = "T87_50V1"
 
-analyze_dwell_time(savefolder, extension)
+    # Test analyze_dwell_time
+    analyze_dwell_time(savefolder, extension)
