@@ -83,7 +83,7 @@ for idx_chip, chip in enumerate(chipName):
             import departureDiameter 
             departureDiameter.ComputeDepartureDiameter(savefolder, extension)
 
-            from Customizable.bubbleProperties import mainProperties
+            from bubbleProperties import mainProperties
             mainProperties(savefolder, extension, chipName=chip, tension=t)
                 
                 

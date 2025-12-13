@@ -1,4 +1,25 @@
-import numpy as np 
+import os
+import pandas as pd
+import numpy as np
+
+
+def readRichFile(path, scoreThresh=0):
+    # le fichiers existe-il?
+    if not os.path.isfile(path):
+        raise FileNotFoundError(f"{path} non trovato.")
+    df = pd.read_csv(path)
+    df.columns = [c.strip().lower() for c in df.columns] # on retire les espaces
+    # Filter rows with score above threshold and valid track_id
+    df_filter = df[df['score'] >= scoreThresh]
+    df_filter = df_filter[df_filter["track_id"].fillna(-1).astype(int) >= 0]
+
+    # Remove duplicates: for each (track_id, frame), keep the detection with highest score
+    df_filter = (df_filter.sort_values(["track_id", "frame", "score"], ascending=[True, True, False])
+            .drop_duplicates(["track_id", "frame"], keep="first"))
+    # Conversion des frames: frame1 → frame0 (indexation à partir de 0)
+    df_filter["frame0"] = df_filter["frame"].astype(int) - 1
+    return df_filter
+
 
 def bubbleDiameter(frame0, tid, rich_df):
     """
@@ -66,3 +87,41 @@ def bubble_exists(frame, tid, rich_df):
     # Filtrer les lignes où frame et track_id correspondent
     filtered = rich_df[(rich_df['frame'] == frame) & (rich_df['track_id'] == tid)]
     return not filtered.empty
+
+def extractRichData(rich_df, frame0, tid, column_name):
+    """
+    Extract the value of a specific column from the rich DataFrame based on frame0 and tid.
+
+    Args:
+        rich_df (pd.DataFrame): The DataFrame containing the data.
+        frame0 (int or list): The frame number(s) (starting from 0).
+        tid (int or list): The track ID(s).
+        column_name (str): The name of the column to extract.
+
+    Returns:
+        The value(s) from the specified column. A single value if frame0 and tid are integers,
+        or a list of values if they are lists.
+    """
+    if isinstance(frame0, int) and isinstance(tid, int):
+        # Single frame and tid
+        row = rich_df.loc[(rich_df['frame0'] == frame0) & (rich_df['track_id'] == tid)]
+        if row.empty:
+            return np.nan
+        return row[column_name].iloc[0]
+
+    elif isinstance(frame0, list) and isinstance(tid, list):
+        # Multiple frames and tids
+        if len(frame0) != len(tid):
+            raise ValueError("frame0 and tid lists must have the same length.")
+        values = []
+        for fr, t in zip(frame0, tid):
+            row = rich_df.loc[(rich_df['frame0'] == fr) & (rich_df['track_id'] == t)]
+            if row.empty:
+                values.append(np.nan)
+            else:
+                values.append(row[column_name].iloc[0])
+        return values
+
+    else:
+        raise TypeError("frame0 and tid must both be either integers or lists of the same length.")
+

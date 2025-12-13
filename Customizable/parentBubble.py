@@ -5,7 +5,7 @@ import cv2
 from collections import defaultdict
 from dataclasses import dataclass
 
-from functions.readRichFile import readRichFile
+from functions.richFileFunctions import readRichFile
 
 # TODO autoriser plus de 2 parents
 maxGrow = 50 # ratio between the grow and the median of grow to detect a grow that is due to a merge

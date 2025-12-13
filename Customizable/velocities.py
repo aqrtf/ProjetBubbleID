@@ -2,8 +2,7 @@ import os, math, csv, ast, json
 import numpy as np, pandas as pd
 
 from csteDef import *
-from functions.computeDiameter import bubbleDiameter
-from functions.readRichFile import readRichFile
+from functions.richFileFunctions import readRichFile, bubbleDiameter
 from functions.rmoutliers import rmoutliers
 
 # Classe pour stocker les vitesses et statistiques
