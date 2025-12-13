@@ -10,10 +10,8 @@ My_output/Test0/**
 My_output/test50_frames/**
 My_output/**
 Inputs/**
-Results/**
 *.mp4
 *.pth
-*.png
 *.jpg
 *.zip
 # Dont ignore this
