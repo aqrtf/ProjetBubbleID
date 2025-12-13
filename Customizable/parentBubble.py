@@ -5,7 +5,7 @@ import cv2
 from collections import defaultdict
 from dataclasses import dataclass
 
-from functions.readRichFile import readRichFile
+from functions.richFileFunctions import readRichFile
 
 # TODO autoriser plus de 2 parents
 maxGrow = 50 # ratio between the grow and the median of grow to detect a grow that is due to a merge
@@ -90,8 +90,6 @@ def build_masks_and_index(json_path, csv_path, image_shape, score_thres, dilate_
         if row.empty:  # Si pas de correspondance, on ignore
             continue
         
-        # for i in row["score"]: # NOTE chgmt de la lecture du fichier rich, normalement plus besoin d'iterer ici, on a deja filtre les lignes
-
         track_id = int(row.iloc[0]['track_id'])  # Récupère le track_id
         mask = mask_from_contour(contour, image_shape, dilate_iters)  # Crée le masque
         if np.sum(mask > 0) == 0:  # Vérifie que le masque n'est pas vide

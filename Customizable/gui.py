@@ -491,7 +491,7 @@ class BubbleIDGUI:
             return
         self.update_status("Calculating bubble properties...")
         try:
-            from Customizable.bubbleProperties import mainProperties
+            from bubbleProperties import mainProperties
             mainProperties(self.save_folder_var.get(), self.extension_var.get())
             self.log_message("Bubble properties calculation completed")
             self.update_status("Ready")

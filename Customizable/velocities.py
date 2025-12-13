@@ -2,12 +2,8 @@ import os, math, csv, ast, json
 import numpy as np, pandas as pd
 
 from csteDef import *
-from functions.computeDiameter import bubbleDiameter
-from functions.readRichFile import readRichFile
+from functions.richFileFunctions import readRichFile, bubbleDiameter
 from functions.rmoutliers import rmoutliers
-
-# TODO pour la velocity il faut prendre en compte que entre les merges
-# TODO il serait bien de comparer la vitesse avec le diameter
 
 # Classe pour stocker les vitesses et statistiques
 class velocities:
@@ -104,7 +100,7 @@ def compute_speed_blocks(frames0, track_ids, labels, mergeFrames, contours, rich
     df["ytop"] = [c[1] for c in topCoords]
 
     # for i in mergeFrames: 
-        # NOTE on retire la frame ou a lieu le merge de l'analyse, est ce utile ??
+        # NOTE faut il retirer la frame ou a lieu le merge de l'analyse??
         ## Supprimer toutes les lignes où col1 est dans la liste
         ## df = df[~df["col1"].isin(to_remove)]
         # df = df[df["frame0"] != i-2] 
@@ -136,7 +132,7 @@ def compute_speed_blocks(frames0, track_ids, labels, mergeFrames, contours, rich
         dt = np.diff(t) # s
         vy = - dy / dt  # origine en haut à gauche (px/s)
         
-        # NOTE normalement on ne devrait plus avoir de vitesse negative puisqu'on ne prend plus ce qui se passe au merge
+        # normalement on ne devrait plus avoir de vitesse negative puisqu'on ne prend plus ce qui se passe au merge
 
         # On retire les vitesse negative
         dypos = dy[dy<0]
@@ -149,12 +145,11 @@ def compute_speed_blocks(frames0, track_ids, labels, mergeFrames, contours, rich
         
         vypos = - dypos[1:]/dtpos
 
-        # TODO ajouter le diametre
         if label == ATTACHED:
             attach_vel.vy.append(vypos)
             attach_vel.dx.append(dxpos)
             attach_vel.sizeBlock.append(vypos.size)
-            attach_vel.diameter.append(diameters) # NOTE diameter a un element de plus que vy
+            attach_vel.diameter.append(diameters) # diameter a un element de plus que vy
         else:
             detach_vel.vy.append(vypos)
             detach_vel.dx.append(dxpos)
@@ -228,6 +223,7 @@ def bubble_velocities(savefolder, extension, minPointForVelocity=2, fps=4000):
 
     # Calcul des statistiques globales
     detach_vel.removeOutliers()
+    attach_vel.removeOutliers()
     detach_vel.computeMean()
     attach_vel.computeMean()
 
