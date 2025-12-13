@@ -4,6 +4,8 @@ import pandas as pd
 from csteDef import *
 from functions.richFileFunctions import readRichFile, bubbleArea, bubble_exists
 
+# TODO il manque de nombreuse bulle dans la table evolution_tid, meme des tres simple par exemple la 2 dans 87_60V1
+
 def trackingStatistics(evolution_tid, score):
     # Calculate tracking statistics
     not_none_idx = [i for i, x in enumerate(evolution_tid) if x is not None]
@@ -200,12 +202,12 @@ def evolution_tid(savefolder, extension, score_thres=0.7):
         def filter_group(group: pd.DataFrame) -> pd.DataFrame:
             """Filter rows within each group to remove redundant bubble_ids."""
             group = group.copy()
-            group = group.sort_values(id_col, key=lambda col: col.str.len())  # Sort by length of bubble_id
+            group = group.sort_values(id_col, key=lambda col: col.str.len(), ascending=False)  # Sort by length of bubble_id
             to_keep = []
 
             for idx, row in group.iterrows():
                 bubble_id = row[id_col]
-                if not any(bubble_id.endswith(kept) for kept in to_keep):
+                if not any(kept.endswith(bubble_id) for kept in to_keep):
                     to_keep.append(bubble_id)
 
             return group[group[id_col].isin(to_keep)]
@@ -226,4 +228,4 @@ def evolution_tid(savefolder, extension, score_thres=0.7):
 
     
     
-# evolution_tid(r"Inputs\T87_out", "T87_60V1")
+evolution_tid(r"Inputs\T87_out", "T87_60V1")

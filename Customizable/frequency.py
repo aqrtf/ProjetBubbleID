@@ -28,7 +28,7 @@ def count_detachment_transitions(savefolder, extension):
     # Chargement du fichier evolutionID
     df_evol = pd.read_csv(evolution_csv)
     tid_arr = df_evol["chemin"].apply(ast.literal_eval).to_list()
-    
+    nb_frame = len(tid_arr[0])
     
     frames_arr = [[j for j, val in enumerate(row) if val is not None] for row in tid_arr]
     bubclass_arr = []
@@ -40,7 +40,7 @@ def count_detachment_transitions(savefolder, extension):
         bubclass_arr.append(x)
     
     # Compteur de bulles avec transition attached -> detached
-    count_detachments = 0
+    # count_detachments = 0
     detachBubble = set()
     
     for idx, tid_evol in enumerate(tid_arr):
@@ -58,20 +58,21 @@ def count_detachment_transitions(savefolder, extension):
                 labels[i+1] == DETACHED and 
                 labels[i+2] == DETACHED):
                 detachBubble.add((frames0[i], int(tids[i])))
-                count_detachments += 1
-                print(f"Frame0 {frames0[i]} : Bulle {df_evol.iloc[idx]['bubble_id']} a effectué une transition attached -> detached")
-        
-    return count_detachments, detachBubble
+                # count_detachments += 1
+                # print(f"Frame0 {frames0[i]} : Bulle {df_evol.iloc[idx]['bubble_id']} a effectué une transition attached -> detached")
+    fps = 4000 # TODO fps doir etre en argument
+    freq = len(detachBubble) / (nb_frame / fps)
+    print(f"Fréquence de détachement: {freq} Hz")    
+    return detachBubble, freq
 
 if __name__ == "__main__":
     # Exemple d'utilisation
-    savefolder = r"Results\T87\T87_out"
+    savefolder = r"Inputs\T87_out"
     extension = "T87_60V1"
     
     try:
-        count, detachBubble = count_detachment_transitions(savefolder, extension)
+        detachBubble, frequence = count_detachment_transitions(savefolder, extension)
         detachBubble = sorted(detachBubble, key=lambda x: x[0])  # Trier par frames0 (premier élément du tuple)
-        print(f"\nNombre total de bulles avec transition attached -> detached: {count}")
         print(f"Bulles avec transition attached -> detached: {detachBubble}")
         print(f"Nombre de bulles avec transition attached -> detached: {len(detachBubble)}")
     except Exception as e:
