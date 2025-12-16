@@ -86,7 +86,7 @@ def analyze_dwell_time(savefolder, extension, score_thres = 0.7, n_frames_post_d
                 idx_frame += 1
                 
                 # Check for fusion events
-                mask = (df_fusion["frame"] == idx_frame) & ((df_fusion["parent1"] == track_id) | (df_fusion["parent2"] == track_id))
+                mask = (df_fusion["frame"] == idx_frame) & ((df_fusion["parent1"] == track_id) | (df_fusion["parent2"] == track_id) | (df_fusion["parent3"] == track_id))
                 if mask.any():
                     track_id = df_fusion.loc[mask, "child"].iat[0]
                     nameBubble += "=>" + str(track_id)

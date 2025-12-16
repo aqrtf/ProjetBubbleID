@@ -5,9 +5,9 @@ import cv2
 from collections import defaultdict
 from dataclasses import dataclass
 
-from functions.richFileFunctions import readRichFile
+from functions.richFileFunctions import readRichFile, bubble_exists
 
-# TODO autoriser plus de 2 parents
+# TODO autoriser plus de 2 parents: fait mais en general ce sont des erreurs
 maxGrow = 50 # ratio between the grow and the median of grow to detect a grow that is due to a merge
 # ------------------------
 # UTILITAIRES
@@ -81,12 +81,12 @@ def build_masks_and_index(json_path, csv_path, image_shape, score_thres, dilate_
     contours = load_json_contours(json_path)  # Charge tous les contours
     # df = pd.read_csv(csv_path)  # Charge le CSV de tracking
 
-    df = readRichFile(csv_path, score_thres)
+    rich_df = readRichFile(csv_path, score_thres)
     data_by_frame = defaultdict(dict)  # Structure: frame -> track_id -> mask
     
     for (frame, det_in_frame), contour in contours.items():
         # Trouve la ligne correspondante dans le CSV
-        row = df[(df['frame'] == frame) & (df['det_in_frame'] == det_in_frame)]
+        row = rich_df[(rich_df['frame'] == frame) & (rich_df['det_in_frame'] == det_in_frame)]
         if row.empty:  # Si pas de correspondance, on ignore
             continue
         
@@ -158,7 +158,8 @@ def get_masks_and_frames(data_by_frame, track_id):
             frames.append(frame)
     return masksArea, frames
 
-def bulle_croissance_rapide(data_by_frame):
+def bulle_croissance_rapide(data_by_frame, richFile):
+    rich_df = readRichFile(richFile)
     result = []
     # on prend les track id unique sous forme de liste
     unique_tracks = list({tid for tracks in data_by_frame.values() for tid in tracks.keys()})
@@ -171,19 +172,22 @@ def bulle_croissance_rapide(data_by_frame):
             if ((croissanceVelocity[croissanceVelocity>0].size > 0) and 
                     (croissanceVelocity.max() > maxGrow * np.median(croissanceVelocity[croissanceVelocity>0]))): 
                 # il s'agit peut etre d'un merge non detecte car il n'y a pas de chgmt de tid
-                idx_max = croissanceVelocity.argmax() + 2 # le +2 vient car les frames commence a 1 et le diff
-                frameMerge = frames[idx_max] # NOTE IndexError: list index out of range pour T89_75V2, pas revu l'erreur
-                mask1 = data_by_frame[frameMerge][tid]
-                # NOTE pour l'instant on considere que le petit parent est tjrs visible sur la frame
-                for tid2, mask2 in data_by_frame[frameMerge].items():
-                    # si une des bulles presentes est recouverte par la bulle alors c'est un merge
-                    # TODO parfois il y a une oscillation du recouvrement
-                    if tid != tid2:
-                        if overlap_ratio(mask1, mask2, 'smallest') > 0.9:
-                            # TODO il faut verifier si la bulle disparait dans les frames suivante, mais regulierement elle reaparrait sur une autre bulle
-                            # TODO peut etre regarder si la taille diminue
-                            print(frameMerge, tid, tid2)
-                            result.append({"frame": frameMerge, "child": tid, "parent1": tid, "parent2": tid2})
+                idx_max = croissanceVelocity.argmax() + 1 # le +1 vient du diff
+                
+                # estce que la bulle existe sur la frame suivante
+                if bubble_exists(frames[idx_max]+1, tid, rich_df):
+                    frameMerge = frames[idx_max] # NOTE IndexError: list index out of range pour T89_85V1, pas revu l'erreur
+                    mask1 = data_by_frame[frameMerge][tid]
+                    # NOTE pour l'instant on considere que le petit parent est tjrs visible sur la frame
+                    for tid2, mask2 in data_by_frame[frameMerge].items():
+                        # si une des bulles presentes est recouverte par la bulle alors c'est un merge
+                        # TODO parfois il y a une oscillation du recouvrement
+                        if tid != tid2:
+                            if overlap_ratio(mask1, mask2, 'smallest') > 0.9:
+                                # TODO il faut verifier si la bulle disparait dans les frames suivante, mais regulierement elle reaparrait sur une autre bulle
+                                # TODO peut etre regarder si la taille diminue
+                                print(frameMerge, tid, tid2)
+                                result.append({"frame": frameMerge, "child": tid, "parent1": tid, "parent2": tid2})
 
     return result
 
@@ -559,9 +563,12 @@ def exportData(fusionDict, fusionWithoutDisappear, changeIDList, changeIDList_al
         for child, parents in tracks.items():
             parent1 = parents[0] 
             parent2 = parents[1] 
+            parent3 = None
             if len(parents) > 2:
-                print(f"WARNING: bubble {child} (frame {frame}) has more than 2 parents")
-            rows.append({"frame": frame, "child": child, "parent1": parent1, "parent2": parent2})
+                parent3 = parents[2]
+                if len(parents) > 3:
+                    print(f"WARNING: bubble {child} (frame {frame}) has more than 2 parents")
+            rows.append({"frame": frame, "child": child, "parent1": parent1, "parent2": parent2, "parent3": parent3})
     for r in fusionWithoutDisappear:
         rows.append(r)
     df_fusion = pd.DataFrame(rows)
@@ -712,7 +719,7 @@ def findMerge(dataFolder, extension, score_thres=0.7, OVERLAP_THRESH=0.1,
                                         MIN_OVERLAP_SAME,
                                         existing_fusions=fusionDict)
         
-        fusionWithoutDisappear = bulle_croissance_rapide(data_by_frame)
+        fusionWithoutDisappear = bulle_croissance_rapide(data_by_frame, richFile)
 
     changeIDList_clean = clean_change_id_list(changeIDList)
             
@@ -725,6 +732,6 @@ def findMerge(dataFolder, extension, score_thres=0.7, OVERLAP_THRESH=0.1,
 ######################################################################################################
 if __name__ == "__main__":
     # Example usage for testing purposes
-    savefolder = r"Inputs\T87_out"
-    extension = "T87_60V1"
+    savefolder = r"Inputs\T89_out"
+    extension = "T89_85V1"
     findMerge(savefolder, extension)

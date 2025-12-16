@@ -9,9 +9,9 @@ chip = ["T87",
         "T88",
         "T89"
         ]
-chipMarker = ["o", "^", "s"]
-colors_map = {50:'r', 60:'g', 75:'b', 85:'c', 100:'m'}
-color_label = ['50V', '60V', '75V', '85V', '100V']
+chipColor = ["r", "g", "b"]
+markers_map = {50:'o', 60:'P', 75:'^', 85:'s', 100:'*'}
+marker_label = ['50V', '60V', '75V', '85V', '100V']
 saveFolder = "results"
 def make_error_boxes(ax, xdata, ydata, xerror, yerror, facecolor='r',
                      edgecolor='none', alpha=0.5):
@@ -40,19 +40,19 @@ for ic, c in enumerate(chip):
     df = pd.read_csv(os.path.join(path, c+"_out\mainProperties.csv"))
     df = df.sort_values(by="tension")
     for it, row in df.iterrows():
-        plt.scatter(row["departDiameter"], row["frequency"], color=colors_map[row['tension']], marker=chipMarker[ic])
+        plt.scatter(row["departDiameter"], row["frequency"], marker=markers_map[row['tension']], color=chipColor[ic])
     # plt.plot(df["departDiameter"], df["frequency"], ".-", )
 
 # creation de la legende
-color_handles = [
-    plt.Line2D([0], [0], marker='o', color='w', markerfacecolor=c,
-               markersize=8, label=lab)
-    for c, lab in zip(list(colors_map.values()), color_label)
-]
 marker_handles = [
     plt.Line2D([0], [0], marker=m, color='w', markerfacecolor='black',
                markersize=8, label=lab)
-    for m, lab in zip(chipMarker, chip)
+    for m, lab in zip(list(markers_map.values()), marker_label)
+]
+color_handles = [
+    plt.Line2D([0], [0], marker='o', color='w', markerfacecolor=c,
+               markersize=8, label=lab)
+    for c, lab in zip(chipColor, chip)
 ]
 plt.legend(handles=color_handles + marker_handles)
 plt.xlabel("Departure diameter [mm]")

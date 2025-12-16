@@ -25,7 +25,9 @@ for i, exp in enumerate(experiments):
     # for arr, m in zip(detach_vel.vy_mm, detach_vel.vMeanPerBlock_mm):
     #     print(f"Array: {arr} | Mean: {m}")
     print(exp)
+    print(f"attach mean velocity: {attach_vel.vMean_mm} mm/s\tdetach mean velocity: {detach_vel.vMean_mm} mm/s")
     plt.scatter(detach_vel.diameterMeanPerBlock_mm, detach_vel.vMeanPerBlock_mm, color= colors[i], marker='.', label=exp)
+    plt.scatter(detach_vel.diameterMean_mm, detach_vel.vMean_mm, color= colors[i], marker='+', label=exp+"mean", s=100)
     d_all.extend(list(detach_vel.diameterMeanPerBlock_mm))
     v_all.extend(list(detach_vel.vMeanPerBlock_mm))
     
@@ -46,5 +48,18 @@ plt.plot(dd*1e3, v_fit*1e3, color="orange", label="Fitted Curve")
 
 plt.xlabel("Diameter (mm)")
 plt.ylabel("Elevation Velocity (mm/s)")
+plt.legend()
+plt.show()
+
+##################################
+plt.figure()
+for i, exp in enumerate(experiments):
+    attach_vel, detach_vel = bubble_velocities(r"Inputs\T87_out", exp, minPointForVelocity=4)
+    print(exp)
+    plt.scatter(attach_vel.diameterMeanPerBlock_mm, attach_vel.vMeanPerBlock_mm, color= colors[i], marker='.', label=exp)
+    plt.scatter(attach_vel.diameterMean_mm, attach_vel.vMean_mm, color= colors[i], marker='+', label=exp+"mean", s=100)
+
+plt.xlabel("Diameter (mm)")
+plt.ylabel("Growing Velocity (mm/s)")
 plt.legend()
 plt.show()

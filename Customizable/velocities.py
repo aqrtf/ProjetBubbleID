@@ -23,11 +23,12 @@ class velocities:
     def computeMean(self):
         """Calcule la vitesse moyenne globale et par bulle."""
         self.vMeanPerBlock = [arr.mean() for arr in self.vy]
-        self.vMean = np.mean(np.concatenate(self.vy))
+        self.vMean = np.mean(self.vMeanPerBlock) #np.mean(np.concatenate(self.vy)) # NOTE lequel est mieux ??
         self.vStdPerBlock = [arr.std() for arr in self.vy]
         self.vStd = np.std(np.concatenate(self.vy))
         self.diameterMeanPerBlock = [arr.mean() for arr in self.diameter]
         self.diameterStdPerBlock = [arr.std() for arr in self.diameter]
+        self.diameterMean = np.mean(self.diameterMeanPerBlock)
         
     def convert2mm(self, mm_per_px):
         """Convertit toutes les vitesses et déplacements en millimètres."""
@@ -39,6 +40,7 @@ class velocities:
         self.vStdPerBlock_mm = np.array(self.vStdPerBlock) * mm_per_px
         self.diameter_mm = [x * mm_per_px for x in self.diameter]
         self.diameterMeanPerBlock_mm = np.array(self.diameterMeanPerBlock) * mm_per_px
+        self.diameterMean_mm = self.diameterMean * mm_per_px
 
 def extractPosition(frame0, tid, contours, rich_df, position):
     """

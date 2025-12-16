@@ -8,29 +8,34 @@ if trackAnalysis:
     import BubbleID_My as BubbleID
     from torch.cuda import is_available
 
-chipName = ["T87",
-            "T88",
+chipName = [#"T87",
+            #"T88",
             "T89"
             ]
-prefixName_all = ["T87_2_PB_250806_BC015_7_Chip_7_",
-              "T88_PB_250828_BC015_7_Chip_6_",
-              "T89_2_PB_250807_BC015_7_Chip_1_"
-              ]
+prefixName_all = {"T87": "T87_2_PB_250806_BC015_7_Chip_7_",
+              "T88" :"T88_PB_250828_BC015_7_Chip_6_",
+              "T89" :"T89_2_PB_250807_BC015_7_Chip_1_"
+              }
 
 videoFolderRoot = r"C:\Users\faraboli\Desktop\BubbleID\BubbleIDGit\ProjetBubbleID\Inputs"
-tensions = [50, 60, 75, 85, 100]
+tensions = [85]#[50, 60, 75, 85, 100]
 model_weight = "model_cav_jpeg"
 nFrameExtract = 550
 score_thres=0.7
 mm_per_px = 0.0227
-for idx_chip, chip in enumerate(chipName):
+for chip in chipName:
     videoFolder = os.path.join(videoFolderRoot, chip)
     savefolder = os.path.join(videoFolderRoot, chip+"_out")
-    prefixName = prefixName_all[idx_chip]
+    prefixName = prefixName_all[chip]
     for t in tensions:
         for tnum in (1, 2):
             extension = chip + "_" + str(t) + "V" + str(tnum)
+            print("#" * 50)
+            print(extension)
             if trackAnalysis:
+                import BubbleID_My as BubbleID
+                from torch.cuda import is_available
+
                 videoName = prefixName + str(t) + "V_" + str(tnum) + "_4actv.avi"
 
                 # Création des chemins

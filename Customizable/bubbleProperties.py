@@ -98,6 +98,9 @@ def mainProperties(savefolder, extension,
     attach_vel, detach_vel = bubble_velocities(savefolder, extension,
                                                minPointForVelocity=2, fps=fps)
     
+    from frequency import count_detachment_transitions
+    _, frequency2 = count_detachment_transitions(savefolder, extension)
+
     # Construction du DataFrame résultat
     results = pd.DataFrame([{
         "chip": chipName,
@@ -107,6 +110,7 @@ def mainProperties(savefolder, extension,
         "departDiameter_std": departDiameterStd,
         "frequency": frequencyMean,
         "frequency_std": frequencyStd,
+        "frequency2": frequency2,
         "elevationVelocity": detach_vel.vMean_mm,
         "elevationVelocity_std": detach_vel.vStd_mm,
         "growingVelocity": attach_vel.vMean_mm,

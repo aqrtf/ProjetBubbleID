@@ -45,7 +45,7 @@ def analyzeTidEvolution(rich_df, df_score, df_fusion, changeID_df, nombre_frame,
     for idx_frame in range(first_seen_frame, nombre_frame+1):
 
         # Check if bubble merges with another at this frame
-        mask = (df_fusion["frame"] == idx_frame) & ((df_fusion["parent1"] == track_id) | (df_fusion["parent2"] == track_id))
+        mask = (df_fusion["frame"] == idx_frame) & ((df_fusion["parent1"] == track_id) | (df_fusion["parent2"] == track_id) | (df_fusion["parent3"] == track_id))
         if (mask).any():
             # Bubble merges - update to child track_id
             track_id = df_fusion.loc[mask, "child"].iat[0]
