@@ -5,7 +5,7 @@ from csteDef import ATTACHED, DETACHED
 from functions.richFileFunctions import readRichFile
 from functions.rmmissing import rmmissing
 
-def count_detachment_transitions(savefolder, extension):
+def count_detachment_transitions(savefolder, extension, fps = 4000):
     """
     Compte le nombre de bulles qui passent de l'état 'attached' à l'état 'detached'.
     
@@ -60,7 +60,6 @@ def count_detachment_transitions(savefolder, extension):
                 detachBubble.add((frames0[i], int(tids[i])))
                 # count_detachments += 1
                 # print(f"Frame0 {frames0[i]} : Bulle {df_evol.iloc[idx]['bubble_id']} a effectué une transition attached -> detached")
-    fps = 4000 # TODO fps doir etre en argument
     freq = len(detachBubble) / (nb_frame / fps)
     print(f"Fréquence de détachement: {freq} Hz")    
     return detachBubble, freq

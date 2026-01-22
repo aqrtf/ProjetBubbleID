@@ -53,6 +53,9 @@ def mainProperties(savefolder, extension,
     df_depart = pd.read_csv(departure_csv)
     df_depart.columns = df_depart.columns.str.strip()  # nettoyage des colonnes
 
+    # Nouveau df des bulles valides pour verif
+    bulleCroissanceValide = []
+    bulleDepartValide = []
     departDiameters = []
     growingTimes = []
 
@@ -64,6 +67,7 @@ def mainProperties(savefolder, extension,
                 # La bulle se détache, ce n'est pas une erreur
                 # Extraction du diamètre de départ
                 departDiameters.append(df_depart[colonnes].mean(axis=1))
+                bulleDepartValide.append(bubble)
 
                 if (bubble.firstArea < maxBirthSize) and (bubble.attach_start_frame > 1) :
                     # On a toute la croissance de la bulle
@@ -73,9 +77,28 @@ def mainProperties(savefolder, extension,
                         growingTimes.append(np.nan)
                     else:
                         growingTimes.append(n_attach_frame / fps)
+                        bulleCroissanceValide.append(bubble)
                 else:
                     growingTimes.append(np.nan)
 
+
+    # Save a csv of valid bubbles for debug
+    debug_csv = os.path.join(savefolder, f"validGrowthBubbles_{extension}.csv")
+    with open(debug_csv, mode="w", newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow(df_depart.columns)
+        for bubble in bulleCroissanceValide:
+            writer.writerow(bubble[1:])  # Exclure l'index
+    print(f"Valid growth bubbles saved to: {debug_csv}")
+    # Save a csv of valid bubbles for debug
+    debug_csv = os.path.join(savefolder, f"validDepartBubbles_{extension}.csv")
+    with open(debug_csv, mode="w", newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow(df_depart.columns)
+        for bubble in bulleDepartValide:
+            writer.writerow(bubble[1:])  # Exclure l'index
+    print(f"Valid departure bubbles saved to: {debug_csv}")
+    
     # Conversion en arrays
     departDiameters = np.array(departDiameters)
     growingTimes = np.array(growingTimes)

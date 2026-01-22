@@ -3,13 +3,13 @@ import os, json
 folderPath = os.path.dirname(os.path.abspath(__file__))
 
 trackAnalysis = False
-findMerge = True
+findMerge = False
 if trackAnalysis:
     import BubbleID_My as BubbleID
     from torch.cuda import is_available
 
-chipName = [#"T87",
-            #"T88",
+chipName = ["T87",
+            "T88",
             "T89"
             ]
 prefixName_all = {"T87": "T87_2_PB_250806_BC015_7_Chip_7_",
@@ -18,7 +18,7 @@ prefixName_all = {"T87": "T87_2_PB_250806_BC015_7_Chip_7_",
               }
 
 videoFolderRoot = r"C:\Users\faraboli\Desktop\BubbleID\BubbleIDGit\ProjetBubbleID\Inputs"
-tensions = [85]#[50, 60, 75, 85, 100]
+tensions = [50, 60, 75, 85, 100]
 model_weight = "model_cav_jpeg"
 nFrameExtract = 550
 score_thres=0.7
