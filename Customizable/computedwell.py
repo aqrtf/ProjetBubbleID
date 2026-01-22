@@ -1,3 +1,26 @@
+
+"""
+computedwell.py
+----------------
+Analyse les temps d'attachement (dwell time) et les événements de détachement des bulles à partir de fichiers de suivi (tracking) et de fusion.
+Génère des chaînes dévolution des bulles et sauvegarde les résultats dans un CSV.
+
+Fonction principale :
+    - analyze_dwell_time(savefolder, extension, ...)
+
+Fichiers lus/écrits (suffixe = extension) :
+    - rich_<suffixe>.csv (lecture)
+    - fusionResult_<suffixe>.csv (lecture)
+    - changeIDResultAll_<suffixe>.csv (lecture)
+    - dwell6_<suffixe>.csv (écriture)
+
+Dépendances internes :
+    - csteDef
+
+Auteurs : [à compléter]
+Date : [à compléter]
+"""
+
 import os, csv, cv2, re, numpy as np
 import pandas as pd
 from csteDef import *
@@ -177,21 +200,38 @@ def analyze_dwell_time(savefolder, extension, score_thres = 0.7, n_frames_post_d
 
     # Remove duplicate evolution chains (where one chain is a subset of another)
     def parse_tokens(series: pd.Series) -> pd.Series:
-        """Parse bubble_id strings into lists of integers using regex splitting."""
+        """
+        Parse bubble_id strings into lists of integers using regex splitting.
+        Args:
+            series (pd.Series): Series of bubble_id strings.
+        Returns:
+            pd.Series: Series of lists of integers.
+        """
         return series.astype(str).apply(lambda s: [int(tok) for tok in re.split(r'<->|=>', s)])
 
     def clean_bubble_ids(df: pd.DataFrame, group_col="detach_frame", id_col="bubble_id") -> pd.DataFrame:
         """
         Remove evolution chains that are subsets of longer chains.
-        
         For bubbles with same detachment frame, keep only the longest unique evolution chains.
+        Args:
+            df (pd.DataFrame): DataFrame with bubble evolution chains.
+            group_col (str): Column to group by (default 'detach_frame').
+            id_col (str): Column with bubble_id (default 'bubble_id').
+        Returns:
+            pd.DataFrame: Filtered DataFrame with unique chains.
         """
         df = df.copy()
         df["_tokens"] = parse_tokens(df[id_col])
         df["_len"] = df["_tokens"].apply(len)
 
         def filter_group(group: pd.DataFrame) -> pd.DataFrame:
-            """Filter within each group to keep only non-redundant evolution chains."""
+            """
+            Filter within each group to keep only non-redundant evolution chains.
+            Args:
+                group (pd.DataFrame): Group of bubble chains.
+            Returns:
+                pd.DataFrame: Filtered group.
+            """
             group = group.sort_values("_len", ascending=False)
             keep = []
             mask = []

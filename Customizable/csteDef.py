@@ -1,9 +1,3 @@
-# # GIO model
 ATTACHED=2
 DETACHED=0
 UNKNOWN=1
-
-# # # New label
-# ATTACHED=1
-# DETACHED=2
-# UNKNOWN=3
