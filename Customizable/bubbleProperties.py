@@ -40,7 +40,7 @@ valid_suffix = {"interp", "discr", "mean"}
 def mainProperties(savefolder, extension,
                       diameterMethod=["mix"],
                       interp="mean",
-                      chipName="T2", tension=50, 
+                      chipName="-", tension=0, 
                       fps=4000, min_attach_frame=4,
                       maxBirthSize = 3000,
                       xCenter = [512-15, 512+15],
@@ -69,7 +69,7 @@ def mainProperties(savefolder, extension,
     # Chemins vers les fichiers
     departure_csv = os.path.join(savefolder, f"departure_{extension}.csv")
     evolution_csv = os.path.join(savefolder, f"evolutionID_{extension}.csv")
-    out_csv = os.path.join(savefolder, f"mainProperties.csv")  
+    out_csv = os.path.join(os.path.dirname(savefolder), f"mainProperties.csv")  
 
     # Vérifications de sécurité
     for path in [departure_csv, evolution_csv]:
