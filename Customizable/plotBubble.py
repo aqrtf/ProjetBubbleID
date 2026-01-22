@@ -90,6 +90,8 @@ for i, c in enumerate(chip):
 plt.legend(chip)
 plt.xlabel("Departure diameter [mm]")
 plt.ylabel("Frequency [Hz]")
+plt.xlim(1, 10)      # Limite l’axe x de 2 à 6
+plt.ylim(30, 450)
 plt.savefig(os.path.join(saveFolder,"diameterVSfrequenyError.png"))
 plt.show()
 
