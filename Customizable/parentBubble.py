@@ -625,6 +625,143 @@ def clean_change_id_list(changeIDList):
     
     return changeIDList_clean
 
+def my_detect_fusion2(data_by_frame, outputFile, N_FRAMES_PREVIOUS_DISAPPEAR, N_FRAMES_POST_DISAPPEAR, POST_FUSION_FRAMES, OVERLAP_THRESH, min_overlap_same=.7):
+    """
+    Détecte les fusions de bulles en analysant les chevauchements temporels entre frames.
+    
+    Identifie les événements de fusion où plusieurs bulles disparues se combinent pour former
+    une nouvelle bulle. Utilise une fenêtre temporelle glissante pour rechercher les parents
+    potentiels parmi les bulles disparues récentes et valide les fusions par calcul d'overlap
+    spatial entre les masques.
+    
+    Args:
+        json_path (str): Chemin vers le fichier JSON des contours
+        csv_path (str): Chemin vers le fichier CSV de tracking
+        outputFile (file): File object ouvert pour l'écriture des logs de détection
+        N_FRAMES_PREVIOUS_DISAPPEAR (int): Fenêtre temporelle pour rechercher les bulles disparues (frames avant)
+        N_FRAMES_POST_DISAPPEAR (int): Fenêtre temporelle pour rechercher les bulles disparues (frames après) 
+        POST_FUSION_FRAMES (int): Nombre de frames après l'apparition pour consolider le masque enfant
+        OVERLAP_THRESH (float): Seuil d'overlap minimum pour valider une relation parent-enfant
+        score_thresh (float): Seuil de score pour filtrer les détections
+        min_overlap_same (float): Seuil pour éviter les doublons entre parents
+        image_shape (tuple): Dimensions des images pour créer les masques
+        
+    Returns:
+        dict: {frame: {new_track_id: [parent_ids]}} Dictionnaire des fusions détectées
+    """
+    
+    bulleDisparue, bulleApparue = bulle_changement(data_by_frame)
+    frames = sorted(data_by_frame.keys())  # Liste triée des frames disponibles
+
+    @dataclass
+    class ParentInfo:
+        parent_id: int
+        frame_parent: int
+
+    parentsDict = defaultdict(lambda: defaultdict(list)) # frame->new_tid-> list de ParentInfo
+
+    for frame in frames:
+        # Vérifier s'il y a des nouvelles bulles sur cette frame
+        if frame not in bulleApparue or not bulleApparue[frame]:
+            continue
+            
+        outputFile.write(f"Frame {frame}:\n\t{len(bulleApparue[frame])} new bubbles: {bulleApparue[frame]}\n")
+        outputFile.write(f"\tBubbles disappear btw frame {frame-N_FRAMES_PREVIOUS_DISAPPEAR} and {frame+N_FRAMES_POST_DISAPPEAR}:\n")
+        
+        for new_tid in bulleApparue[frame]:
+            if new_tid not in data_by_frame[frame]:
+                continue
+                
+            child_mask = data_by_frame[frame][new_tid]
+            # Pour ameliorer la robustesse on ne prends pas que le mask de la nouvelle bulle 
+            # a son apparition mais aussi sur les qq frames suivantes. En effet, le tracking 
+            # n'est pas toujours complet
+            for i_frame in range(frame+1, frame+1+POST_FUSION_FRAMES):
+                # Vérifier que la bulle existe dans les données
+                if (i_frame in data_by_frame and 
+                    new_tid in data_by_frame[i_frame]): 
+
+                    child_mask = child_mask + data_by_frame[i_frame][new_tid]
+            
+            # Chercher les parents dans les frames autour (frame-1, frame, frame+1)
+            for search_frame in range(frame-N_FRAMES_PREVIOUS_DISAPPEAR, frame+1+N_FRAMES_POST_DISAPPEAR):
+                if search_frame in bulleDisparue and bulleDisparue[search_frame]:
+                    outputFile.write(f"\t\tFrame {search_frame}: {bulleDisparue[search_frame]}\n")
+                    for dis_tid in bulleDisparue[search_frame]:
+                        # Vérifier que le parent existe dans les données
+                        if dis_tid == new_tid: # un parent ne peut pas etre son propre fils
+                            continue
+                        if (search_frame-1 in data_by_frame and 
+                            dis_tid in data_by_frame[search_frame-1]): 
+                            
+                            parent_mask = data_by_frame[search_frame-1][dis_tid] 
+                            if mask_area(child_mask) <= mask_area(parent_mask): # la nouvelle bulle doit etre plus grandes que ses parents
+                                continue
+
+                            ratio = overlap_ratio(parent_mask, child_mask, reference='biggest')
+                            
+                            if ratio > OVERLAP_THRESH:
+                                parentsDict[frame][new_tid].append(ParentInfo(parent_id=dis_tid, frame_parent=search_frame-1))
+                                outputFile.write(f"\t\t\tFound parent: {dis_tid} (frame {search_frame}) -> {new_tid}, ratio: {ratio:.3f}\n")
+
+    outputFile.write("##########################################################\n")
+    outputFile.write(f"Results before cleaning: {len(parentsDict)} fusions detect:\n")
+    for frame, tracks in parentsDict.items():
+        for new_tid, parents in tracks.items():
+            outputFile.write(f"\tFrame {frame:3d}: {new_tid:3d} <- {[info.parent_id for info in parents]}\n")
+
+
+    # NETTOYAGE : retirer les entrées vides et celles avec moins de 2 parents
+    outputFile.write("##########################################################\nCleaning:\n")
+    parentsDict_clean = {}
+    parentsDict_clean2 = defaultdict(dict)
+
+    for frame, tracks in parentsDict.items():
+        # Filtrer pour garder seulement les tracks avec au moins 2 parents
+        tracks_with_min_2_parents = {
+            track_id: parents 
+            for track_id, parents in tracks.items() 
+            if len(parents) >= 2
+        }
+        
+        # Ne garder la frame que si elle contient au moins une track valide
+        if tracks_with_min_2_parents:
+            parentsDict_clean[frame] = tracks_with_min_2_parents
+
+            # Retirer les parents s'ils sont trop proche l'un de l'autre 
+            for new_tid, parents_list in parentsDict_clean[frame].items():
+                parents_ids = [info.parent_id for info in parents_list]
+                frames_parents = [info.frame_parent for info in parents_list]
+                
+                # Appliquer le filtrage
+                parents_filtres = filtrer_parents_par_intersection(
+                    list(parents_ids), 
+                    list(frames_parents), 
+                    data_by_frame, 
+                    min_overlap_same=min_overlap_same
+                )
+                
+                # Ne garder que si on a au moins 2 parents après filtrage
+                if len(parents_filtres) >= 2:
+                    parentsDict_clean2[frame][new_tid] = parents_filtres
+
+    # Nettoyage final : retirer les frames vides dans parentsDict_clean2
+    parentsDict_clean2 = {
+        frame: tracks 
+        for frame, tracks in parentsDict_clean2.items() 
+        if tracks  # Garde seulement les frames avec au moins une track
+    }
+
+    print("\nRésultats des fusions détectées:")
+    outputFile.write("##########################################################\n")
+    outputFile.write(f"Results: {len(parentsDict_clean2)} fusions detect:\n")
+    for frame, tracks in parentsDict_clean2.items():
+        for new_tid, parents in tracks.items():
+            print(f"Frame {frame:3d}: {new_tid:3d} <- {parents}")
+            outputFile.write(f"\tFrame {frame:3d}: {new_tid:3d} <- {parents}\n")
+
+    
+    return parentsDict_clean2
 
 # ------------------------
 # EXÉCUTION

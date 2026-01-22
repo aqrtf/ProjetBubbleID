@@ -21,13 +21,13 @@ def afficher_frames_autour(video_path, frame_number):
         return
     
     # Calculer les frames à afficher (4 avant + centrale + 3 après = 8 frames)
-    start_frame = max(1, frame_number - 4)
-    end_frame = min(total_frames, frame_number + 3)
+    start_frame = max(1, frame_number - 3)
+    end_frame = min(total_frames, frame_number + 2)
     
     frames_a_afficher = list(range(start_frame, end_frame + 1))
     
     # Configuration du subplot : 2 lignes × 4 colonnes
-    n_rows, n_cols = 2, 4
+    n_rows, n_cols = 2, 3
     fig, axes = plt.subplots(n_rows, n_cols, figsize=(20, 10))
     
     # Aplatir les axes pour faciliter l'itération
@@ -46,10 +46,16 @@ def afficher_frames_autour(video_path, frame_number):
         
         # Convertir BGR (OpenCV) en RGB (Matplotlib)
         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        
-        # Afficher la frame
-        axes_flat[i].imshow(frame_rgb)
-        
+
+        # Définir la zone à zoomer : (x1, y1) = (400, 930), (x2, y2) = (500, 830)
+        x1, y1 = 400, 930
+        x2, y2 = 500, 830
+        # Attention : en numpy, l'ordre est [y1:y2, x1:x2]
+        frame_zoom = frame_rgb[y2:y1, x1:x2] if y1 > y2 else frame_rgb[y1:y2, x1:x2]
+
+        # Afficher la zone zoomée
+        axes_flat[i].imshow(frame_zoom)
+
         # Encadrer la frame - méthode directe avec set_linewidth
         if frame_idx == frame_number:
             # Cadre rouge épais pour la frame centrale
@@ -63,7 +69,7 @@ def afficher_frames_autour(video_path, frame_number):
                 spine.set_color('black')
                 spine.set_linewidth(.5)
                 spine.set_visible(True)
-        
+
         axes_flat[i].set_xticks([])
         axes_flat[i].set_yticks([])
         
@@ -83,6 +89,8 @@ def afficher_frames_autour(video_path, frame_number):
     cap.release()
 
 
+
+afficher_frames_autour(r"C:\Users\afara\Documents\EPFL\cours\MA3\Projet\ProjetBubbleID\Inputs\T87_out\tracked_T87_50V2.avi", 253)
 # Utilisation
-for i in [6, 9, 10, 21, 24, 49, 85, 88]:
-    afficher_frames_autour(r"C:\Users\faraboli\Desktop\BubbleID\BubbleIDGit\ProjetBubbleID\My_output\SaveData3\tracked_T113_2_60V_2.avi", i)
+# for i in [6, 9, 10, 21, 24, 49, 85, 88]:
+#     afficher_frames_autour(r"C:\Users\faraboli\Desktop\BubbleID\BubbleIDGit\ProjetBubbleID\My_output\SaveData3\tracked_T113_2_60V_2.avi", i)

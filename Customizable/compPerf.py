@@ -28,8 +28,15 @@ from PIL import Image
 import os
 
 def convert_all_png_to_jpg(images_folder, output_folder, quality):
+    """
+    Convertit toutes les images PNG d'un dossier en JPEG avec la qualité spécifiée.
+    Conserve le nom de base du fichier et enregistre dans le dossier de sortie.
+    Args:
+        images_folder (str): Dossier contenant les PNG.
+        output_folder (str): Dossier de sortie pour les JPEG.
+        quality (int): Qualité JPEG (0-100).
+    """
     os.makedirs(output_folder, exist_ok=True)
-    
     for filename in os.listdir(images_folder):
         if filename.lower().endswith(".png"):
             png_path = os.path.join(images_folder, filename)
@@ -111,14 +118,20 @@ from detectron2.data import detection_utils as utils
 import detectron2.data.transforms as T
 
 def custom_mapper(dataset_dict):
+    """
+    Applique des transformations d'augmentation de données à une image et ses annotations
+    pour l'entraînement Detectron2 (brillance, contraste, flip, etc.).
+    Args:
+        dataset_dict (dict): Dictionnaire d'une image et ses annotations.
+    Returns:
+        dict: Dictionnaire modifié avec image transformée et instances filtrées.
+    """
     dataset_dict = copy.deepcopy(dataset_dict)  # it will be modified by code below
     image = utils.read_image(dataset_dict["file_name"], format="BGR")
-    
     mean = 0
     std_dev = 25
     gaussian_noise = np.random.normal(mean, std_dev, image.shape).astype(np.uint8)
     #noisy_image = cv2.add(image, gaussian_noise)
-    
     transform_list = [
         #T.Resize((800,600)),
         T.RandomBrightness(0.8, 1.8),
@@ -131,7 +144,6 @@ def custom_mapper(dataset_dict):
     ]
     image, transforms = T.apply_transform_gens(transform_list, image)
     dataset_dict["image"] = torch.as_tensor(image.transpose(2, 0, 1).astype("float32"))
-
     annos = [
         utils.transform_instance_annotations(obj, transforms, image.shape[:2])
         for obj in dataset_dict.pop("annotations")
@@ -144,6 +156,14 @@ def custom_mapper(dataset_dict):
 class CustomTrainer(DefaultTrainer):
     @classmethod
     def build_train_loader(cls, cfg):
+        """
+        Surcharge la méthode de Detectron2 pour utiliser le custom_mapper
+        lors de la création du DataLoader d'entraînement.
+        Args:
+            cfg: Configuration Detectron2.
+        Returns:
+            DataLoader
+        """
         return build_detection_train_loader(cfg, mapper=custom_mapper)
 
 trainer=CustomTrainer(cfg)

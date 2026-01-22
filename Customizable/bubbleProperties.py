@@ -1,3 +1,30 @@
+
+"""
+bubbleProperties.py
+-------------------
+Analyse et calcule les propriétés principales des bulles (diamètre de départ, temps de croissance, fréquences, vitesses)
+à partir de fichiers CSV issus du traitement vidéo. Les résultats sont sauvegardés dans un CSV et un JSON.
+
+Fonction principale :
+    - mainProperties(savefolder, extension, ...):
+        Calcule et sauvegarde les propriétés principales des bulles pour une expérience donnée.
+
+Fichiers lus/écrits (suffixe = extension) :
+    - departure_<suffixe>.csv (lecture)
+    - evolutionID_<suffixe>.csv (lecture)
+    - mainProperties.csv (écriture, append)
+    - velocities_<suffixe>.json (écriture)
+
+Dépendances internes :
+    - csteDef
+    - velocities (fonction bubble_velocities)
+    - frequency (fonction count_detachment_transitions)
+    - functions.rmmissing, functions.rmoutliers
+
+Auteurs : [à compléter]
+Date : [à compléter]
+"""
+
 import os, csv, ast, json
 import numpy as np, pandas as pd
 
