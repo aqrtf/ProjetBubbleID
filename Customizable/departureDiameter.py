@@ -1,6 +1,8 @@
 from csteDef import *
-
-# TODO si on perd une bulle de vue trop longtemps, il faut repartir de zero pour son dwell time
+from functions.richFileFunctions import readRichFile
+import os
+import os, math, csv, ast, json
+import numpy as np, pandas as pd
 # TODO si on perd la bulle de vue que faire
 
 def ComputeDepartureDiameter(savefolder, extension,
@@ -15,8 +17,7 @@ def ComputeDepartureDiameter(savefolder, extension,
     CALCULE LE DIAMETRE DE DEPART DES BULLES
     Objectif: Determiner le diamètre des bulles au moment où elles se détachent
     """
-    import os, math, csv, ast, json
-    import numpy as np, pandas as pd
+    
 
     # =============================================================================
     # SECTION 1: INITIALISATION ET CHARGEMENT DES FICHIERS
@@ -45,23 +46,11 @@ def ComputeDepartureDiameter(savefolder, extension,
     mm_per_px = float(dataScale["mm_per_px"])
     
     # Chargement et préparation du DataFrame principal
-    df = pd.read_csv(rich_csv)
-    # Nettoyage des noms de colonnes: minuscules et sans espaces
-    df.columns = [c.strip().lower() for c in df.columns]
-    # Suppression des colonnes dupliquées
-    df = df.loc[:, ~pd.Index(df.columns).duplicated(keep='first')]
+    df = readRichFile(rich_csv, scoreThresh=0.0)
+    # correction des labels des bulles attachées trop haut
+    from correctionLabel import correctionLabel
+    df = correctionLabel(df, y_limit_attached = 820)
     
-    # Gestion des noms de colonnes alternatifs
-    if "track_id" not in df.columns and "tid" in df.columns:
-        df = df.rename(columns={"tid": "track_id"})
-    if "frame" not in df.columns: 
-        raise ValueError("Manca 'frame' nel rich CSV.")
-    
-    # Conversion des frames: frame1 → frame0 (indexation à partir de 0)
-    df["frame0"] = df["frame"].astype(int) - 1
-    # Filtrage: seulement les tracks avec ID valide (≥ 0)
-    df = df[df["track_id"].fillna(-1).astype(int) >= 0]
-
     # VÉRIFICATION DES COLONNES REQUISES
     need = {"area_px", "perim_px", "feret_max_px", "feret_min_px", "ell_major_px", "ell_minor_px", "score"}
     miss = [c for c in need if c not in df.columns]
@@ -142,13 +131,19 @@ def ComputeDepartureDiameter(savefolder, extension,
                 if attach_start is None: 
                     attach_start = fr_s[i]  # Premier frame attaché
                 attach_end_i = i  # Dernier frame attaché (mis à jour à chaque fois)
+            elif i+1 < len(lb_s) and lb_s[i+1] == ATTACHED:
+                    # On continue la séquence si le prochain est attaché
+                    continue
             else:
                 # Si séquence trop courte, on reset
-                if run >= min_attached_run: 
-                    break  # Séquence valide trouvée
-                attach_start = None
-                attach_end_i = None
-                run = 0
+                if run < min_attached_run: 
+                    attach_start = None
+                    attach_end_i = None
+                    run = 0
+                    continue
+                if i+1 < len(lb_s) and lb_s[i+1] == DETACHED:
+                    # Sequence valide
+                    break
             # # Trop delicat de trouver un bon nombre de maxLostTrack
             # if i!=0 and lostTrack[i-1]>maxLostTrack:
             #     # Si on perd de vue la bulle trop longtemps, on reset

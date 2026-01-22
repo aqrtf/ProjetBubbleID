@@ -47,9 +47,9 @@ def afficher_frames_autour(video_path, frame_number):
     # Afficher la zone zoomée
     plt.imshow(frame_zoom)
     plt.axis('off')
-    plt.axis('off')
-    plt.savefig(r"C:\Users\afara\Documents\EPFL\cours\MA3\Projet\rapport\Figure\beforeIdealMerge.png", bbox_inches='tight', pad_inches=0)
-    plt.close()
+    # plt.axis('off')
+    # plt.savefig(r"C:\Users\afara\Documents\EPFL\cours\MA3\Projet\rapport\Figure\beforeIdealMerge.png", bbox_inches='tight', pad_inches=0)
+    # plt.close()
     plt.show()
 
     # Libérer la vidéo

@@ -5,16 +5,16 @@ folderPath = os.path.dirname(os.path.abspath(__file__))
 # Refaire le tracking ?
 trackAnalysis = False
 # Refaire la recherche de merges ?
-findMerge = True
+findMerge = False
 
 if trackAnalysis:
     import BubbleID_My as BubbleID
     from torch.cuda import is_available
 
 # Liste des chips à analyser
-chipName = [#"T87",
-            #"T88",
-            "T89"
+chipName = ["T87",
+            # "T88",
+            # "T89"
             ]
 # Préfixe des noms de vidéos
 prefixName_all = {"T87": "T87_2_PB_250806_BC015_7_Chip_7_",
@@ -22,9 +22,9 @@ prefixName_all = {"T87": "T87_2_PB_250806_BC015_7_Chip_7_",
               "T89" :"T89_2_PB_250807_BC015_7_Chip_1_"
               }
 
-videoFolderRoot = r"C:\Users\faraboli\Desktop\BubbleID\BubbleIDGit\ProjetBubbleID\Inputs"
+videoFolderRoot = os.path.join(os.path.dirname(folderPath), "Inputs")
 # Liste des tensions à analyser
-tensions = [85]#[50, 60, 75, 85, 100]
+tensions = [50, 60, 75, 85, 100]
 
 model_weight = "model_cav_jpeg"
 nFrameExtract = 550
@@ -97,7 +97,20 @@ for chip in chipName:
 
             from bubbleProperties import mainProperties
             mainProperties(savefolder, extension, chipName=chip, tension=t)
-                
+  
+  
+# mean over experiments
+for chip in chipName:
+    savefolder = os.path.join(videoFolderRoot, chip+"_out")
+    prefixName = prefixName_all[chip]
+    for t in tensions:
+        extension = chip + "_" + str(t) + "V"
+        print("#" * 50)
+        print(extension)
+        
+        from bubbleProperties import mainPropertiesMean
+        mainPropertiesMean(savefolder, extension, chipName=chip, tension=t)
+              
                 
             
                 

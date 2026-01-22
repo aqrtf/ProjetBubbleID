@@ -47,14 +47,14 @@ def afficher_frames_autour(video_path, frame_number):
         # Convertir BGR (OpenCV) en RGB (Matplotlib)
         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
-        # Définir la zone à zoomer : (x1, y1) = (400, 930), (x2, y2) = (500, 830)
-        x1, y1 = 400, 930
-        x2, y2 = 500, 830
-        # Attention : en numpy, l'ordre est [y1:y2, x1:x2]
-        frame_zoom = frame_rgb[y2:y1, x1:x2] if y1 > y2 else frame_rgb[y1:y2, x1:x2]
+        # # Définir la zone à zoomer : (x1, y1) = (400, 930), (x2, y2) = (500, 830)
+        # x1, y1 = 400, 930
+        # x2, y2 = 500, 830
+        # # Attention : en numpy, l'ordre est [y1:y2, x1:x2]
+        # frame_rgb = frame_rgb[y2:y1, x1:x2] if y1 > y2 else frame_rgb[y1:y2, x1:x2]
 
-        # Afficher la zone zoomée
-        axes_flat[i].imshow(frame_zoom)
+        # Afficher 
+        axes_flat[i].imshow(frame_rgb)
 
         # Encadrer la frame - méthode directe avec set_linewidth
         if frame_idx == frame_number:
