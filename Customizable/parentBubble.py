@@ -158,7 +158,7 @@ def get_masks_and_frames(data_by_frame, track_id):
             frames.append(frame)
     return masksArea, frames
 
-def bulle_croissance_rapide(data_by_frame, richFile):
+def bulle_croissance_rapide(data_by_frame, richFile, maxGrow):
     rich_df = readRichFile(richFile)
     result = []
     # on prend les track id unique sous forme de liste
@@ -183,7 +183,7 @@ def bulle_croissance_rapide(data_by_frame, richFile):
                         # si une des bulles presentes est recouverte par la bulle alors c'est un merge
                         # TODO parfois il y a une oscillation du recouvrement
                         if tid != tid2:
-                            if overlap_ratio(mask1, mask2, 'smallest') > 0.9:
+                            if overlap_ratio(mask1, mask2, 'smallest') > 0.9: #TODO set en parametre
                                 # TODO il faut verifier si la bulle disparait dans les frames suivante, mais regulierement elle reaparrait sur une autre bulle
                                 # TODO peut etre regarder si la taille diminue
                                 print(frameMerge, tid, tid2)
@@ -325,7 +325,7 @@ def my_detect_fusion(data_by_frame, outputFile, N_FRAMES_PREVIOUS_DISAPPEAR, N_F
                             if mask_area(child_mask) <= mask_area(parent_mask): # la nouvelle bulle doit etre plus grandes que ses parents
                                 continue
 
-                            ratio = overlap_ratio(parent_mask, child_mask, reference='biggest')
+                            ratio = overlap_ratio(parent_mask, child_mask, reference='smallest')
                             
                             if ratio > OVERLAP_THRESH:
                                 parentsDict[frame][new_tid].append(ParentInfo(parent_id=dis_tid, frame_parent=search_frame-1))
@@ -791,11 +791,11 @@ def my_detect_fusion2(data_by_frame, outputFile, N_FRAMES_PREVIOUS_DISAPPEAR, N_
 # dataFolder = "My_output/Test6"
 # extension = "Test6"
 
-def findMerge(dataFolder, extension, score_thres=0.7, OVERLAP_THRESH=0.1,
+def findMerge(dataFolder, extension, score_thres=0.7, OVERLAP_THRESH=0.7,
                                     MIN_OVERLAP_SAME=0.7, POST_FUSION_FRAMES=2, N_FRAMES_PREVIOUS_DISAPPEAR=3, 
                                     N_FRAMES_POST_DISAPPEAR=2,
-                                    IMAGE_SHAPE=(1024, 1024), DILATE_ITERS=1
-                                    ):
+                                    IMAGE_SHAPE=(1024, 1024), DILATE_ITERS=1,
+                                    maxGrow = 50):
     """
     Fonction principale pour détecter les fusions de bulles et les changements de track_id.
     
@@ -856,7 +856,7 @@ def findMerge(dataFolder, extension, score_thres=0.7, OVERLAP_THRESH=0.1,
                                         MIN_OVERLAP_SAME,
                                         existing_fusions=fusionDict)
         
-        fusionWithoutDisappear = bulle_croissance_rapide(data_by_frame, richFile)
+        fusionWithoutDisappear = bulle_croissance_rapide(data_by_frame, richFile, maxGrow)
 
     changeIDList_clean = clean_change_id_list(changeIDList)
             
@@ -869,6 +869,10 @@ def findMerge(dataFolder, extension, score_thres=0.7, OVERLAP_THRESH=0.1,
 ######################################################################################################
 if __name__ == "__main__":
     # Example usage for testing purposes
-    savefolder = r"Inputs\T89_out"
-    extension = "T89_85V1"
-    findMerge(savefolder, extension)
+    savefolder = r"Inputs\T87_out"
+    extension = "T87_60V1"
+    findMerge(savefolder, extension, score_thres=0.7, OVERLAP_THRESH=0.7,
+                                    MIN_OVERLAP_SAME=0.7, POST_FUSION_FRAMES=2, N_FRAMES_PREVIOUS_DISAPPEAR=3, 
+                                    N_FRAMES_POST_DISAPPEAR=2,
+                                    IMAGE_SHAPE=(1024, 1024), DILATE_ITERS=1,
+                                    maxGrow = 50)

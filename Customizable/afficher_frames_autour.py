@@ -90,7 +90,7 @@ def afficher_frames_autour(video_path, frame_number):
 
 
 
-afficher_frames_autour(r"C:\Users\afara\Documents\EPFL\cours\MA3\Projet\ProjetBubbleID\Inputs\T87_out\tracked_T87_50V2.avi", 253)
+afficher_frames_autour(r"C:\Users\afara\Documents\EPFL\cours\MA3\Projet\ProjetBubbleID\Inputs\T87_out\tracked_T87_50V2.avi", 249)
 # Utilisation
 # for i in [6, 9, 10, 21, 24, 49, 85, 88]:
 #     afficher_frames_autour(r"C:\Users\faraboli\Desktop\BubbleID\BubbleIDGit\ProjetBubbleID\My_output\SaveData3\tracked_T113_2_60V_2.avi", i)

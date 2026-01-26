@@ -392,7 +392,7 @@ class BubbleIDGUI:
         
         self.update_status("Creating tracked video...")
         try:
-            self.test120.make_tracked_video(n_frames=self.nFrameExtract_var.get(), fps=5, score_thres=0.7)
+            self.test120.make_tracked_video(n_frames=self.nFrameExtract_var.get(), fps=5, score_thres=self.scoreThres_var.get())
             self.log_message("Tracked video created successfully")
             self.update_status("Ready")
         except Exception as e:
