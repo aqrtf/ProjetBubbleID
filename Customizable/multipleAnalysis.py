@@ -1,4 +1,7 @@
 import os, json
+"""
+Permet de faire les analyse sur plusieurs experiences (chip et tension) en une seule execution.
+Il est possible de choisir si on veut refaire le tracking et/ou la recherche de merges."""
 
 folderPath = os.path.dirname(os.path.abspath(__file__))
 

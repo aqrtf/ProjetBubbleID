@@ -50,6 +50,14 @@ def mainProperties(savefolder, extension,
     Retourne un DataFrame avec les résultats et met à jour un fichier CSV.
     
     maxBirthSize:  Taille maximale (en pixels carrés) pour considérer une bulle comme 'nouvelle' si elle apparaît après les premiers frames
+    diameterMethod: Methode d'evaluation du diametre parmi "area", "feret_max", "feret_min", "ell_maj", "ell_min", "perim", "mix"
+    interp: Methode d'interpolation parmi "interp", "discr", "mean"
+    chipName: Nom de la chip (renseigne dans le csv de sortie et par le code multipleAnalysis)
+    tension: Tension appliquée (renseigne dans le csv de sortie et par le code multipleAnalysis)
+    fps: Frames par seconde de la vidéo (utilisé pour le calcul des temps)
+    min_attach_frame: Nombre minimum de frames d'attachement pour considérer une bulle comme valide
+    xCenter: Zone centrale à exclure pour le calcul du temps de croissance (interférence avec les bulles en avant)
+    xEdge: Zone proche des bords à exclure pour le calcul du temps de croissance (interférence avec les bords)
 
     """
 
