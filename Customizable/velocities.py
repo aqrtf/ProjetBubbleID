@@ -6,7 +6,21 @@ from functions.richFileFunctions import readRichFile, bubbleDiameter
 from functions.rmoutliers import rmoutliers
 
 # Classe pour stocker les vitesses et statistiques
+
 class velocities:
+    """
+    Classe pour stocker les vitesses et statistiques associées aux bulles.
+
+    Args:
+        vy (list): Vitesses par bloc (chaque bloc est un numpy array).
+        dx (list): Déplacements latéraux par bloc.
+        sizeBlock (list): Taille de chaque bloc.
+        diameter (list): Diamètres des bulles par bloc.
+        vMean (float): Vitesse moyenne globale.
+        vMeanPerBlock (list): Vitesse moyenne par bloc.
+        vStd (float): Écart-type global.
+        vStdPerBlock (list): Écart-type par bloc.
+    """
     def __init__(self):
         self.vy = []
         self.dx = []
@@ -18,20 +32,30 @@ class velocities:
         self.vStdPerBlock = None
 
     def removeOutliers(self):
+        """
+        Retire les outliers des vitesses dans chaque bloc.
+        """
         self.vy = [rmoutliers(arr)[0] for arr in self.vy]
 
     def computeMean(self):
-        """Calcule la vitesse moyenne globale et par bulle."""
+        """
+        Calcule la vitesse moyenne globale et par bloc, ainsi que les diamètres.
+        """
         self.vMeanPerBlock = [arr.mean() for arr in self.vy]
-        self.vMean = np.mean(self.vMeanPerBlock) #np.mean(np.concatenate(self.vy)) # NOTE lequel est mieux ??
+        self.vMean = np.mean(self.vMeanPerBlock)
         self.vStdPerBlock = [arr.std() for arr in self.vy]
         self.vStd = np.std(np.concatenate(self.vy))
         self.diameterMeanPerBlock = [arr.mean() for arr in self.diameter]
         self.diameterStdPerBlock = [arr.std() for arr in self.diameter]
         self.diameterMean = np.mean(self.diameterMeanPerBlock)
-        
+
     def convert2mm(self, mm_per_px):
-        """Convertit toutes les vitesses et déplacements en millimètres."""
+        """
+        Convertit toutes les vitesses, déplacements et diamètres en millimètres.
+
+        Args:
+            mm_per_px (float): Facteur de conversion mm/px.
+        """
         self.vy_mm = [x * mm_per_px for x in self.vy]
         self.dx_mm = [x * mm_per_px for x in self.dx]
         self.vMean_mm = self.vMean * mm_per_px
@@ -45,7 +69,19 @@ class velocities:
 def extractPosition(frame0, tid, contours, rich_df, position):
     """
     Extrait la position de la bulle selon le mode choisi.
-    position : 'top', 'bottom', 'centroid'
+
+    Args:
+        frame0 (int): Numéro de la frame (commence à 0).
+        tid (int): ID de la bulle.
+        contours (dict): Contours des bulles.
+        rich_df (pandas.DataFrame): table rich.
+        position (str): Position a extraire ('top', 'bottom', 'centroid').
+
+    Returns:
+        tuple: Coordonnées (x, y) de la bulle.
+
+    Raises:         
+        ValueError: Si le mode de position est incorrect.
     """
     if position == "centroid":
         coord = rich_df.loc[
@@ -73,7 +109,21 @@ def compute_speed_blocks(frames0, track_ids, labels, mergeFrames, contours, rich
                          attach_vel, detach_vel, minPointForVelocity, fps):
     """
     Calcule les vitesses par bloc de labels (ATTACHED / DETACHED).
+
     Remplit les objets attach_vel et detach_vel.
+
+    Args:
+        frames0 (list): Frames de départ.
+        track_ids (list): IDs des bulles.
+        labels (list): Labels des bulles.
+        mergeFrames (list): Frames de fusion.
+        contours (dict): Contours des bulles.
+        rich_df (pandas.DataFrame): DataFrame rich avec les propriétés des bulles.
+        attach_vel (velocities): Objet velocities pour les bulles ATTACHED.
+        detach_vel (velocities): Objet velocities pour les bulles DETACHED.
+        minPointForVelocity (int): Minimum de points pour calculer la vitesse. Si en dessous on ignore le bloc.
+        fps (int): Images par seconde.
+
     """
     
 
@@ -163,6 +213,19 @@ def bubble_velocities(savefolder, extension, minPointForVelocity=2, fps=4000):
     """
     Fonction principale qui charge les fichiers, calcule les vitesses
     et retourne deux objets velocities (attach_vel, detach_vel).
+
+    Args:
+        savefolder (str): Dossier contenant les fichiers nécessaires.
+        extension (str): Extension pour identifier les fichiers.
+        minPointForVelocity (int, optional): Nombre minimum de points pour calculer la vitesse (par défaut 2).
+        fps (int, optional): Images par seconde (par défaut 4000).
+
+    Returns:
+        attach_vel (velocities): Vitesses pour les bulles attachées.
+        detach_vel (velocities): Vitesses pour les bulles détachées.
+
+    Raises:
+        FileNotFoundError: Si un des fichiers requis n'est pas trouvé.
     """
 
     # =============================================================================

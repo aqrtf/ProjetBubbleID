@@ -4,7 +4,7 @@ import os
 import numpy as np
 from scipy.stats import linregress
 
-path = r"C:\Users\faraboli\Desktop\BubbleID\BubbleIDGit\ProjetBubbleID\Inputs"
+path = r"C:\Users\afara\Documents\EPFL\cours\MA3\Projet\ProjetBubbleID\Inputs"
 chip = ["T87",
         "T88",
         "T89"

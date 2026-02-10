@@ -158,7 +158,7 @@ def get_masks_and_frames(data_by_frame, track_id):
             frames.append(frame)
     return masksArea, frames
 
-def bulle_croissance_rapide(data_by_frame, richFile, maxGrow):
+def bulle_croissance_rapide(data_by_frame, richFile, maxGrow, overlap_thresh):
     rich_df = readRichFile(richFile)
     result = []
     # on prend les track id unique sous forme de liste
@@ -171,21 +171,29 @@ def bulle_croissance_rapide(data_by_frame, richFile, maxGrow):
             croissanceVelocity = np.diff(masksArea)/np.diff(frames)
             if ((croissanceVelocity[croissanceVelocity>0].size > 0) and 
                     (croissanceVelocity.max() > maxGrow * np.median(croissanceVelocity[croissanceVelocity>0]))): 
+                # NOTE tester d'autre type de detection: est ce que la bulle grossit de plus de x% par rapport a sa taille precedente, ou est ce que la bulle grossit de plus de x% par rapport a sa taille mediane, ou est ce que la bulle grossit de plus de x% par rapport a sa taille precedente  ??
                 # il s'agit peut etre d'un merge non detecte car il n'y a pas de chgmt de tid
                 idx_max = croissanceVelocity.argmax() + 1 # le +1 vient du diff
                 
                 # estce que la bulle existe sur la frame suivante
                 if bubble_exists(frames[idx_max]+1, tid, rich_df):
-                    frameMerge = frames[idx_max] # NOTE IndexError: list index out of range pour T89_85V1, pas revu l'erreur
+                    frameMerge = frames[idx_max]
                     mask1 = data_by_frame[frameMerge][tid]
                     # NOTE pour l'instant on considere que le petit parent est tjrs visible sur la frame
                     for tid2, mask2 in data_by_frame[frameMerge].items():
                         # si une des bulles presentes est recouverte par la bulle alors c'est un merge
                         # TODO parfois il y a une oscillation du recouvrement
                         if tid != tid2:
-                            if overlap_ratio(mask1, mask2, 'smallest') > 0.9: #TODO set en parametre
+                            if overlap_ratio(mask1, mask2, 'smallest') > overlap_thresh: #TODO est ce qu'on garde le meme que pour un merge classique ????
                                 # TODO il faut verifier si la bulle disparait dans les frames suivante, mais regulierement elle reaparrait sur une autre bulle
                                 # TODO peut etre regarder si la taille diminue
+                                print(frameMerge, tid, tid2)
+                                result.append({"frame": frameMerge, "child": tid, "parent1": tid, "parent2": tid2})
+                    # on recommence a la frame juste avant
+                    for tid2, mask2 in data_by_frame[frameMerge-1].items():
+                        # si une des bulles presentes est recouverte par la bulle alors c'est un merge
+                        if tid != tid2:
+                            if overlap_ratio(mask1, mask2, 'smallest') > overlap_thresh: #TODO est ce qu'on garde le meme que pour un merge classique ????
                                 print(frameMerge, tid, tid2)
                                 result.append({"frame": frameMerge, "child": tid, "parent1": tid, "parent2": tid2})
 
@@ -856,7 +864,7 @@ def findMerge(dataFolder, extension, score_thres=0.7, OVERLAP_THRESH=0.7,
                                         MIN_OVERLAP_SAME,
                                         existing_fusions=fusionDict)
         
-        fusionWithoutDisappear = bulle_croissance_rapide(data_by_frame, richFile, maxGrow)
+        fusionWithoutDisappear = bulle_croissance_rapide(data_by_frame, richFile, maxGrow, OVERLAP_THRESH)
 
     changeIDList_clean = clean_change_id_list(changeIDList)
             

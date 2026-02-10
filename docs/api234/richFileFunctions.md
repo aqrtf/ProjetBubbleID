@@ -1,0 +1,3 @@
+# functions.richFileFunctions
+
+::: functions.richFileFunctions

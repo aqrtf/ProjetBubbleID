@@ -1,0 +1,27 @@
+nav:
+  - Accueil: index.md
+  - API:
+      - affichage.afficher_frames_autour: docs/api.md#affichageafficher_frames_autour
+      - affichage.side_by_side: docs/api.md#affichageside_by_side
+      - BubbleID_My: docs/api.md#bubbleid_my
+      - bubbleProperties: docs/api.md#bubbleproperties
+      - comparaisonCollapse: docs/api.md#comparaisoncollapse
+      - compPerf: docs/api.md#compperf
+      - computedwell: docs/api.md#computedwell
+      - correctionLabel: docs/api.md#correctionlabel
+      - csteDef: docs/api.md#cstedef
+      - departureDiameter: docs/api.md#departurediameter
+      - evolution_tid: docs/api.md#evolution_tid
+      - frequency: docs/api.md#frequency
+      - functions.richFileFunctions: docs/api.md#functionsrichfilefunctions
+      - functions.rmmissing: docs/api.md#functionsrmmissing
+      - functions.rmoutliers: docs/api.md#functionsrmoutliers
+      - gui: docs/api.md#gui
+      - multipleAnalysis: docs/api.md#multipleanalysis
+      - parentBubble: docs/api.md#parentbubble
+      - plot2: docs/api.md#plot2
+      - plotBubble: docs/api.md#plotbubble
+      - plotFvsQ: docs/api.md#plotfvsq
+      - plotVvsD: docs/api.md#plotvvsd
+      - position: docs/api.md#position
+      - velocities: docs/api.md#velocities

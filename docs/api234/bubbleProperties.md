@@ -1,0 +1,3 @@
+# bubbleProperties
+
+::: bubbleProperties
