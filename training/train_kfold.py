@@ -26,9 +26,7 @@ from detectron2.evaluation import COCOEvaluator, inference_on_dataset
 # --- Configuration Section ---
 
 # Paths
-BASE_DATASET_FOLDER = "DATASETS/dataset_tip_png"
-LABELME_TRAIN_PATH = os.path.join(BASE_DATASET_FOLDER, "train")
-LABELME_VAL_PATH = os.path.join(BASE_DATASET_FOLDER, "val")
+BASE_DATASET_FOLDER = "dataset"  # All jsons and images are here
 OUTPUT_DIR = "../MODELS/kfold_3classes_tip_png"
 BEST_MODEL_DIR = os.path.join(OUTPUT_DIR, "best_model")
 
@@ -55,9 +53,9 @@ FINAL_LABELS = sorted(list(set(MAPPING.values())))
 
 # --- Helper Functions ---
 
-def get_all_labelme_files(train_path, val_path):
-    """Gathers all labelme json files from train and val directories."""
-    return glob.glob(os.path.join(train_path, "*.json")) + glob.glob(os.path.join(val_path, "*.json"))
+def get_all_labelme_files(dataset_path):
+    """Gathers all labelme json files from the dataset directory."""
+    return glob.glob(os.path.join(dataset_path, "*.json"))
 
 def create_coco_dataset_from_labelme(labelme_files):
     """
@@ -181,7 +179,7 @@ def main():
 
     # 1. Prepare unified dataset
     logger.info("Preparing unified dataset from labelme files...")
-    all_labelme_files = get_all_labelme_files(LABELME_TRAIN_PATH, LABELME_VAL_PATH)
+    all_labelme_files = get_all_labelme_files(BASE_DATASET_FOLDER)
     coco_data, image_categories = create_coco_dataset_from_labelme(all_labelme_files)
     
     all_images = coco_data["images"]
