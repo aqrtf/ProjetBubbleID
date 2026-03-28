@@ -1,4 +1,3 @@
-
 import os
 import json
 import glob
@@ -10,8 +9,6 @@ import random
 import yaml
 import copy
 import logging
-import argparse
-import wandb
 import albumentations as A
 from sklearn.model_selection import StratifiedKFold
 
@@ -19,12 +16,23 @@ from sklearn.model_selection import StratifiedKFold
 from detectron2.utils.logger import setup_logger
 from detectron2.data import transforms as T
 from detectron2 import model_zoo
-from detectron2.engine import DefaultPredictor, DefaultTrainer, HookBase
+from detectron2.engine import DefaultPredictor, DefaultTrainer
 from detectron2.config import get_cfg
 from detectron2.utils.visualizer import Visualizer, ColorMode
 from detectron2.data import MetadataCatalog, DatasetCatalog, build_detection_test_loader, build_detection_train_loader, detection_utils as utils
 from detectron2.data.datasets import register_coco_instances
 from detectron2.evaluation import COCOEvaluator, inference_on_dataset
+
+# --- HYPERPARAMETERS ---
+# Modify these values to tune your training run.
+
+DATASET_PATH = "dataset"
+OUTPUT_DIR = "../MODELS/kfold_run"
+N_SPLITS = 5
+RANDOM_STATE = 42
+MAX_ITER = 5000
+LR = 0.00025
+BATCH_SIZE = 2
 
 # --- Configuration Section ---
 
@@ -46,20 +54,6 @@ CATEGORY_IDS = {
 FINAL_LABELS = sorted(list(set(MAPPING.values())))
 
 # --- Helper Functions ---
-
-def get_args():
-    """Parses command line arguments."""
-    parser = argparse.ArgumentParser(description="Detectron2 k-fold training script with W&B and Albumentations")
-    parser.add_argument("--dataset", default="dataset", help="Path to the dataset folder with labelme JSONs and images")
-    parser.add_argument("--output-dir", default="../MODELS/kfold_run", help="Directory to save models and logs")
-    parser.add_argument("--n-splits", type=int, default=5, help="Number of k-fold splits")
-    parser.add_argument("--random-state", type=int, default=42, help="Random state for k-fold split")
-    parser.add_argument("--max-iter", type=int, default=5000, help="Total training iterations")
-    parser.add_argument("--lr", type=float, default=0.00025, help="Base learning rate")
-    parser.add_argument("--batch-size", type=int, default=2, help="Images per batch (solver.ims_per_batch)")
-    parser.add_argument("--wandb-project", default="bubbleid-kfold", help="W&B project name")
-    return parser.parse_args()
-
 
 def get_all_labelme_files(dataset_path):
     """Gathers all labelme json files from the dataset directory."""
@@ -223,13 +217,6 @@ def custom_mapper_with_albumentations(dataset_dict):
     dataset_dict["instances"] = utils.filter_empty_instances(instances)
     return dataset_dict
 
-class WandbHook(HookBase):
-    def after_step(self):
-        metrics = self.trainer.storage.latest()
-        log_metrics = {k: v[0] for k, v in metrics.items() if isinstance(v, tuple) and isinstance(v[0], (int, float))}
-        if log_metrics:
-            wandb.log(log_metrics)
-
 class CustomTrainer(DefaultTrainer):
     @classmethod
     def build_train_loader(cls, cfg):
@@ -241,26 +228,17 @@ class CustomTrainer(DefaultTrainer):
             output_folder = os.path.join(cfg.OUTPUT_DIR, "inference")
         return COCOEvaluator(dataset_name, output_dir=output_folder)
 
-    def build_hooks(self):
-        hooks = super().build_hooks()
-        hooks.insert(-1, WandbHook())
-        return hooks
-
 # --- Main Training Logic ---
 
-def main(args):
+def main():
     setup_logger()
     logger = logging.getLogger("detectron2")
 
-    # Init wandb
-    wandb.init(project=args.wandb_project, config=args)
-
-    OUTPUT_DIR = args.output_dir
     BEST_MODEL_DIR = os.path.join(OUTPUT_DIR, "best_model")
 
     # 1. Prepare unified dataset
     logger.info("Preparing unified dataset from labelme files...")
-    all_labelme_files = get_all_labelme_files(args.dataset)
+    all_labelme_files = get_all_labelme_files(DATASET_PATH)
     coco_data, image_categories = create_coco_dataset_from_labelme(all_labelme_files)
     
     all_images = coco_data["images"]
@@ -272,7 +250,7 @@ def main(args):
         json.dump(coco_data, f)
     
     # 2. K-Fold Cross-validation loop
-    skf = StratifiedKFold(n_splits=args.n_splits, shuffle=True, random_state=args.random_state)
+    skf = StratifiedKFold(n_splits=N_SPLITS, shuffle=True, random_state=RANDOM_STATE)
     all_metrics = []
     best_ap = -1
     
@@ -284,7 +262,7 @@ def main(args):
         fold_output_dir = os.path.join(OUTPUT_DIR, f"fold_{fold + 1}")
         os.makedirs(fold_output_dir, exist_ok=True)
         
-        logger.info(f"--- Starting Fold {fold + 1}/{args.n_splits} ---")
+        logger.info(f"--- Starting Fold {fold + 1}/{N_SPLITS} ---")
 
         # Create train/val datasets for this fold
         train_images = [all_images[i] for i in train_idx]
@@ -317,22 +295,18 @@ def main(args):
         cfg.OUTPUT_DIR = fold_output_dir
         
         cfg.DATASETS.TRAIN = (train_dataset_name,)
-        cfg.DATASETS.TEST = (val_dataset_name,) # Set test dataset for evaluation
+        cfg.DATASETS.TEST = (val_dataset_name,)
         cfg.DATALOADER.NUM_WORKERS = 2
         
         # Reset weights from model zoo for each fold
         cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml")
         
-        cfg.SOLVER.IMS_PER_BATCH = args.batch_size
-        cfg.SOLVER.BASE_LR = args.lr
-        cfg.SOLVER.MAX_ITER = args.max_iter
-        cfg.SOLVER.STEPS = (int(args.max_iter * 0.6), int(args.max_iter * 0.8)) # Dynamic steps
+        cfg.SOLVER.IMS_PER_BATCH = BATCH_SIZE
+        cfg.SOLVER.BASE_LR = LR
+        cfg.SOLVER.MAX_ITER = MAX_ITER
+        cfg.SOLVER.STEPS = (int(MAX_ITER * 0.6), int(MAX_ITER * 0.8))
         cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 512
         cfg.MODEL.ROI_HEADS.NUM_CLASSES = len(FINAL_LABELS)
-
-        # Log full config to wandb for the first fold
-        if fold == 0:
-             wandb.config.update(cfg)
 
         trainer = CustomTrainer(cfg)
         trainer.resume_or_load(resume=False)
@@ -347,10 +321,6 @@ def main(args):
         evaluator = COCOEvaluator(val_dataset_name, cfg, False, output_dir=os.path.join(fold_output_dir, "evaluation"))
         val_loader = build_detection_test_loader(cfg, val_dataset_name)
         metrics = inference_on_dataset(predictor.model, val_loader, evaluator)
-
-        # Log evaluation metrics to wandb
-        eval_log = {f"fold_{fold+1}/{k}": v for k, v in metrics.get("bbox", {}).items()}
-        wandb.log(eval_log)
         
         ap_metric = metrics.get('bbox', {}).get('AP', 0)
         all_metrics.append(ap_metric)
@@ -376,18 +346,10 @@ def main(args):
     mean_ap = np.mean(all_metrics)
     std_ap = np.std(all_metrics)
     
-    # Log summary to wandb
-    wandb.summary["mean_ap"] = mean_ap
-    wandb.summary["std_ap"] = std_ap
-    wandb.summary["best_ap"] = best_ap
-
     logger.info(f"AP scores for each fold: {all_metrics}")
     logger.info(f"Mean AP: {mean_ap:.4f}")
     logger.info(f"Standard Deviation of AP: {std_ap:.4f}")
     logger.info(f"Best model saved in: {BEST_MODEL_DIR}")
 
-    wandb.finish()
-
 if __name__ == "__main__":
-    args = get_args()
-    main(args)
+    main()
