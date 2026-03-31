@@ -79,7 +79,14 @@ class EarlyStoppingHook(HookBase):
         if self._metric not in latest_metrics:
             return
 
-        current_metric = latest_metrics[self._metric][0] # La valeur est dans un tuple (valeur, itération)
+        # Récupérer la valeur ET l'itération où elle a été enregistrée
+        current_metric, metric_iter = latest_metrics[self._metric]
+
+        # CORRECTION CRUCIALE : N'agir que si la métrique a été enregistrée à l'itération ACTUELLE.
+        # Cela empêche le hook de ré-évaluer la même ancienne métrique à chaque pas, ce qui
+        # déclenchait l'arrêt prématurément.
+        if metric_iter != self.trainer.iter:
+            return
 
         improved = False
         if self._goal == "max":

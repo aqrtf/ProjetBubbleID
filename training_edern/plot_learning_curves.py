@@ -38,18 +38,33 @@ def plot_learning_curves(metrics_path: str):
     df = pd.DataFrame(train_metrics)
 
     # Créer la figure et les axes pour les graphiques
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 12), sharex=True)
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(14, 12), sharex=True)
     fig.suptitle(f"Courbes d'apprentissage pour {os.path.basename(metrics_path)}", fontsize=16)
 
-    # --- Graphique 1 : Total Loss ---
-    ax1.plot(df['iteration'], df['total_loss'], label='Total Loss (Entraînement)')
+    # --- Graphique 1 : Perte d'entraînement vs. Performance de validation (AP) ---
+    ax1.plot(df['iteration'], df['total_loss'], label='Total Loss (Entraînement)', color='tab:blue')
     # Calculer une moyenne mobile pour lisser la courbe
     if len(df) > 10:
-        ax1.plot(df['iteration'], df['total_loss'].rolling(window=10).mean(), label='Moyenne mobile (10 it.)', linestyle='--')
-    ax1.set_ylabel('Perte (Loss)')
-    ax1.set_title("Perte Totale durant l'Entraînement")
+        ax1.plot(df['iteration'], df['total_loss'].rolling(window=10).mean(), label='Moyenne mobile (10 it.)', linestyle='--', color='tab:cyan')
+    ax1.set_ylabel('Perte (Loss)', color='tab:blue')
+    ax1.set_title("Perte d'Entraînement vs. AP de Validation")
+    ax1.tick_params(axis='y', labelcolor='tab:blue')
+
+    # Axe Y secondaire pour l'Average Precision (AP)
+    ax1_ap = ax1.twinx()
+    if eval_metrics:
+        eval_df = pd.DataFrame(eval_metrics)
+        # La métrique AP peut être un float ou un tuple (valeur, itération)
+        eval_df['bbox/AP_val'] = eval_df['bbox/AP'].apply(lambda x: x[0] if isinstance(x, (list, tuple)) else x)
+        ax1_ap.plot(eval_df['iteration'], eval_df['bbox/AP_val'], label='bbox/AP (Validation)', color='tab:red', marker='o', linestyle=':')
+        ax1_ap.set_ylabel('bbox/AP', color='tab:red')
+        ax1_ap.tick_params(axis='y', labelcolor='tab:red')
+
+    # Combiner les légendes des deux axes Y
+    lines, labels = ax1.get_legend_handles_labels()
+    lines2, labels2 = ax1_ap.get_legend_handles_labels()
+    ax1.legend(lines + lines2, labels + labels2, loc='upper right')
     ax1.grid(True, which='both', linestyle='--', linewidth=0.5)
-    ax1.legend()
     
     # --- Graphique 2 : Détailler les pertes ---
     loss_components = [key for key in df.columns if key.startswith('loss_')]
