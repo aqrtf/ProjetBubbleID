@@ -31,11 +31,11 @@ DATASET_PATH = "dataset"
 OUTPUT_DIR = "kfold_run"
 N_SPLITS = 4
 RANDOM_STATE = 42
-MAX_ITER = 3000  # Augmenté pour donner sa chance à l'Early Stopping
+MAX_ITER = 4000  # Augmenté pour donner sa chance à l'Early Stopping
 LR = 0.0005
 BATCH_SIZE = 4  # Réduit pour limiter la surchauffe du GPU (était à 8)
-EVAL_PERIOD = 300  # Évaluer sur le set de validation tous les 300 itérations
-CHECKPOINT_PERIOD = 300 # Sauvegarder un checkpoint tous les 300 itérations
+EVAL_PERIOD = 400  # Évaluer sur le set de validation tous les 300 itérations
+CHECKPOINT_PERIOD = 400 # Sauvegarder un checkpoint tous les 300 itérations
 
 # --- Early Stopping Configuration ---
 EARLY_STOPPING_PATIENCE = 3  # Patience de 3 évaluations. Si pas d'amélioration, on arrête.
@@ -190,97 +190,109 @@ def create_detectron2_dataset_from_labelme(labelme_files):
     return dataset_dicts, np.array(image_categories), categories
 
 
+# --- Global variable to cache the background image ---
+# _background_image = None # Désactivé car la soustraction de fond réduisait la précision.
+
 def custom_mapper_with_albumentations(dataset_dict):
     """
     A custom data mapper that uses Albumentations for data augmentation.
-    This version corrects a critical bug where polygon reconstruction failed
-    if albumentations removed keypoints that went out of bounds.
-    The fix involves labeling each keypoint with its parent annotation index
-    and passing these labels through the transformation pipeline.
+    This version handles non-rigid transformations (like GridDistortion) by
+    converting segmentations to masks, transforming the masks, and then
+    reconstructing the annotations.
+    La soustraction de fond a été désactivée car elle semblait réduire la précision.
     """
+    # global _background_image # Désactivé
+
     dataset_dict = copy.deepcopy(dataset_dict)
     image = utils.read_image(dataset_dict["file_name"], format="BGR")
 
-    bboxes = []
-    keypoints = []
-    # Chaque point-clé (sommet du polygone) est étiqueté avec l'index de son annotation parente.
-    # Cela garantit que même si des points-clés sont supprimés, nous pouvons toujours
-    # reconstruire correctement les polygones.
-    keypoint_labels = [] 
-    
-    annotations = dataset_dict.get("annotations", [])
-    for i, ann in enumerate(annotations):
-        bboxes.append(ann["bbox"])
+    # --- Background Subtraction (Désactivé car réduisait la précision) ---
+    # if _background_image is None:
+    #     background_path = os.path.join(DATASET_PATH, "background.png")
+    #     if os.path.exists(background_path):
+    #         _background_image = cv2.imread(background_path, cv2.IMREAD_COLOR)
+    #         logging.getLogger("detectron2").info(f"Loaded background image from {background_path}")
+    # if _background_image is not None:
+    #     bg_resized = cv2.resize(_background_image, (image.shape[1], image.shape[0]))
+    #     image = cv2.absdiff(image, bg_resized)
+
+    H, W, _ = image.shape
+
+    # 1. Convert polygon segmentations to binary masks
+    masks = []
+    category_ids = []
+    for ann in dataset_dict.get("annotations", []):
+        mask = np.zeros((H, W), dtype=np.uint8)
         
         if not isinstance(ann["segmentation"], list) or not ann["segmentation"]:
             continue
             
         poly = np.array(ann["segmentation"][0]).reshape(-1, 2)
-        keypoints.extend(poly.tolist())
-        keypoint_labels.extend([i] * len(poly))
+        
+        # fillPoly requires integer coordinates
+        cv2.fillPoly(mask, [poly.astype(np.int32)], 255)
+        masks.append(mask)
+        category_ids.append(ann["category_id"])
 
-    # Le `label_fields=['keypoint_labels']` est crucial. Il indique à albumentations
-    # de transformer la liste `keypoint_labels` de la même manière que les `keypoints`.
+    # 2. Define Albumentations pipeline for images and masks
+    # Refined augmentation pipeline (Priority #2)
     transform = A.Compose([
-        # Remplacer A.Resize par une transformation qui préserve le ratio d'aspect,
-        # pour correspondre au comportement de l'évaluation.
         A.LongestMaxSize(max_size=800),
         A.PadIfNeeded(min_height=800, min_width=800, border_mode=cv2.BORDER_CONSTANT, value=0),
         A.HorizontalFlip(p=0.5),
-        A.ShiftScaleRotate(shift_limit=0.05, scale_limit=0.1, rotate_limit=15, p=0.5, border_mode=cv2.BORDER_CONSTANT),
+        # Reduced non-rigid transforms, added MotionBlur
+        A.ShiftScaleRotate(shift_limit=0.06, scale_limit=0.1, rotate_limit=10, p=0.5, border_mode=cv2.BORDER_CONSTANT),
         A.RandomBrightnessContrast(p=0.3),
         A.RandomGamma(p=0.3),
         A.GaussNoise(p=0.2),
-    ], 
-    bbox_params=A.BboxParams(format='coco', label_fields=['original_indices'], min_visibility=0.3),
-    keypoint_params=A.KeypointParams(format='xy', label_fields=['keypoint_labels'])
-    )
-
-    original_indices = list(range(len(bboxes)))
+        A.MotionBlur(p=0.2),
+    ])
 
     try:
-        # On passe `keypoint_labels` à la transformation.
-        transformed = transform(
-            image=image, 
-            bboxes=bboxes, 
-            keypoints=keypoints,
-            original_indices=original_indices,
-            keypoint_labels=keypoint_labels
-        )
-        
+        # 3. Apply the transformation
+        transformed = transform(image=image, masks=masks)
         image_transformed = transformed['image']
-        transformed_bboxes = transformed['bboxes']
-        transformed_keypoints = transformed['keypoints']
-        # Albumentations a filtré `keypoint_labels` pour nous.
-        transformed_keypoint_labels = transformed['keypoint_labels']
-        kept_indices = set(transformed['original_indices'])
-
-    except (ValueError, IndexError): 
+        masks_transformed = transformed['masks']
+    except (ValueError, IndexError) as e:
+        # This can happen if augmentations result in empty masks/images
+        logging.getLogger("detectron2").warning(f"Skipping an image due to augmentation error: {e}")
         return None
 
-    # On reconstruit les polygones de manière fiable.
-    reconstructed_polygons = {idx: [] for idx in kept_indices}
-    for kp, original_ann_idx in zip(transformed_keypoints, transformed_keypoint_labels):
-        if original_ann_idx in kept_indices:
-            reconstructed_polygons[original_ann_idx].append(kp)
-
-    new_bbox_map = {original_idx: transformed_bboxes[i] for i, original_idx in enumerate(transformed['original_indices'])}
-
+    # 4. Reconstruct annotations from transformed masks
     annos = []
-    for original_idx, poly_points in reconstructed_polygons.items():
-        if len(poly_points) < 3: continue
+    for i, mask_t in enumerate(masks_transformed):
+        # Find contours from the transformed mask. This can return multiple contours
+        # if an augmentation splits a single annotation into multiple parts.
+        contours, _ = cv2.findContours(mask_t, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        
+        if not contours:
+            continue
+        
+        # Iterate over all found contours for this mask
+        for contour in contours:
+            # We need at least 3 points to form a valid polygon
+            if len(contour) < 3:
+                continue
 
-        annos.append({
-            "bbox": new_bbox_map[original_idx],
-            "bbox_mode": detectron2.structures.BoxMode.XYWH_ABS,
-            "segmentation": [np.array(poly_points).flatten().tolist()],
-            "category_id": annotations[original_idx]["category_id"],
-            "iscrowd": 0,
-        })
+            # Create new bounding box from the contour
+            x, y, w, h = cv2.boundingRect(contour)
+
+            # Optional: filter out very small contours that might be noise
+            if w <= 1 or h <= 1:
+                continue
+
+            annos.append({
+                "bbox": [float(x), float(y), float(w), float(h)],
+                "bbox_mode": detectron2.structures.BoxMode.XYWH_ABS,
+                "segmentation": [contour.flatten().tolist()],
+                "category_id": category_ids[i], # All parts get the same category ID
+                "iscrowd": 0,
+            })
 
     if not annos:
         return None
 
+    # 5. Finalize the dataset dictionary for Detectron2
     dataset_dict.pop("annotations", None)
     dataset_dict["image"] = torch.as_tensor(image_transformed.transpose(2, 0, 1).astype("float32"))
     instances = utils.annotations_to_instances(annos, image_transformed.shape[:2])
@@ -345,6 +357,11 @@ def main():
         logger.warning("Some images have no categories. Stratification might be suboptimal.")
 
     for fold, (train_idx, val_idx) in enumerate(skf.split(np.zeros(len(all_dataset_dicts)), image_categories)):
+        # Condition pour ne lancer que le fold 4, comme demandé.
+        # Pour un entraînement complet, commentez ou supprimez cette ligne.
+        if (fold + 1) != 4:
+            continue
+
         fold_output_dir = os.path.join(OUTPUT_DIR, f"fold_{fold + 1}")
         os.makedirs(fold_output_dir, exist_ok=True)
         
@@ -377,14 +394,17 @@ def main():
         
         cfg.DATASETS.TRAIN = (train_dataset_name,)
         cfg.DATASETS.TEST = (val_dataset_name,)
-        cfg.DATALOADER.NUM_WORKERS = 4  # Réduit pour limiter l'utilisation CPU/GPU (était à 8)
+        cfg.DATALOADER.NUM_WORKERS = 4
         
         cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml")
         
         cfg.SOLVER.IMS_PER_BATCH = BATCH_SIZE
         cfg.SOLVER.BASE_LR = LR
         cfg.SOLVER.MAX_ITER = MAX_ITER
-        cfg.SOLVER.STEPS = [] # Désactivé car on utilise l'arrêt précoce
+        # On réactive la réduction du learning rate. Lorsque les métriques stagnent (plateau),
+        # réduire le LR permet d'affiner la recherche d'un meilleur minimum.
+        # Cela fonctionne bien avec l'arrêt précoce.
+        cfg.SOLVER.STEPS = (3200,) # Réduit le LR à 3200 itérations. Par défaut, il est divisé par 10.
         cfg.SOLVER.CHECKPOINT_PERIOD = CHECKPOINT_PERIOD
         cfg.SOLVER.AMP.ENABLED = True
         
@@ -392,6 +412,9 @@ def main():
         cfg.MODEL.ROI_HEADS.NUM_CLASSES = len(FINAL_LABELS)
         
         cfg.TEST.EVAL_PERIOD = EVAL_PERIOD
+
+        with open(os.path.join(cfg.OUTPUT_DIR, "config.yaml"), "w") as f:
+            f.write(cfg.dump())
 
         trainer = CustomTrainer(cfg)
         trainer.resume_or_load(resume=False)
@@ -401,15 +424,11 @@ def main():
         except Exception as e:
             logger.error(f"Training stopped with an exception: {e}", exc_info=True)
 
-        # On charge les métriques du meilleur checkpoint sauvegardé.
-        # On encapsule dans un try/except pour gérer le cas où l'entraînement
-        # échoue avant la première évaluation (et donc avant la création de metrics.json).
         best_fold_ap = -1.0
         try:
             with open(os.path.join(fold_output_dir, "metrics.json")) as f:
                 metrics_lines = f.readlines()
             
-            # Trouver la MEILLEURE évaluation AP dans tout le fichier
             for line in metrics_lines:
                 metrics = json.loads(line)
                 if EARLY_STOPPING_METRIC in metrics and isinstance(metrics[EARLY_STOPPING_METRIC], (float, int)):
@@ -419,7 +438,7 @@ def main():
                         
         except FileNotFoundError:
             logger.warning(f"Le fichier metrics.json n'a pas été trouvé pour le fold {fold + 1}. "
-                           f"Cela peut se produire si l'entraînement a échoué avant la première évaluation. Score AP considéré comme -1.")
+                           f"Score AP considéré comme -1.")
         
         all_final_metrics[f"fold_{fold + 1}"] = best_fold_ap
         logger.info(f"Fold {fold+1} Best AP: {best_fold_ap:.4f}")
